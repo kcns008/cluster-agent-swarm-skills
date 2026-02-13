@@ -2,6 +2,9 @@
 
 A collection of AI agent skills for orchestrating a **platform engineering swarm** — specialized AI agents that collaborate like a real team to manage Kubernetes and OpenShift clusters at scale.
 
+![Demo](assets/demo.gif)
+
+
 Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ## Architecture Overview
