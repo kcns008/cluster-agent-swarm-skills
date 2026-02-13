@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+*.env
+
+# Node
+node_modules/
+
+# Logs
+*.log
+
+# Secrets (never commit)
+kubeconfig*
+*.pem
+*.key
+*.crt
+token*
+secret*
