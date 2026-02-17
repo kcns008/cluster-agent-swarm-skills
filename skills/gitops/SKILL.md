@@ -51,6 +51,7 @@ You believe in self-healing systems. Every change goes through a PR.
 - Git repository management and branching strategies
 - Drift detection and remediation
 - Secrets management integration (Vault, Sealed Secrets, External Secrets)
+- ROSA and ARO-specific GitOps patterns (AWS Secrets Manager, Azure Key Vault)
 
 ### What You Care About
 - Declarative configuration (YAML over imperative commands)
@@ -693,6 +694,202 @@ spec:
           image: ${IMAGE}:${VERSION}
           command: ["./migrate.sh"]
       restartPolicy: Never
+```
+
+---
+
+## 10. AWS SECRETS MANAGER (For ROSA)
+
+### Store Secret in AWS Secrets Manager
+
+```bash
+# Create secret
+aws secretsmanager create-secret \
+  --name "prod/payment-service/db-credentials" \
+  --secret-string '{"username":"admin","password":"secret123"}'
+
+# Get secret value
+aws secretsmanager get-secret-value \
+  --secret-id "prod/payment-service/db-credentials" \
+  --query SecretString
+
+# Rotate secret
+aws secretsmanager rotate-secret \
+  --secret-id "prod/payment-service/db-credentials"
+```
+
+### External Secrets Operator with AWS Secrets Manager
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: aws-secrets-manager
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: us-east-1
+      auth:
+        jwt:
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: db-credentials
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  target:
+    name: db-credentials
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: prod/payment-service/db-credentials
+        property: password
+```
+
+### ArgoCD App for ROSA with AWS Secrets
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payment-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/org/repo.git
+    targetRevision: main
+    path: clusters/rosa/prod/payment-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: payment-service
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
+```
+
+---
+
+## 11. AZURE KEY VAULT (For ARO)
+
+### Store Secret in Azure Key Vault
+
+```bash
+# Create key vault
+az keyvault create \
+  --name ${KV_NAME} \
+  --resource-group ${RG} \
+  --location ${LOCATION}
+
+# Set secret
+az keyvault secret set \
+  --vault-name ${KV_NAME} \
+  --name "db-password" \
+  --value "secret123"
+
+# Get secret
+az keyvault secret show \
+  --vault-name ${KV_NAME} \
+  --name "db-password" \
+  --query value
+
+# Enable RBAC for key vault
+az keyvault update \
+  --name ${KV_NAME} \
+  --enable-rbac-authorization true
+```
+
+### External Secrets Operator with Azure Key Vault
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: azure-key-vault
+spec:
+  provider:
+    azure:
+      tenantId: ${AZURE_TENANT_ID}
+      clientId: ${AZURE_CLIENT_ID}
+      clientSecret:
+        name: azure-sp-secret
+        namespace: external-secrets
+      vaultUrl: "https://${KV_NAME}.vault.azure.net"
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: db-credentials
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: azure-key-vault
+    kind: ClusterSecretStore
+  target:
+    name: db-credentials
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: db-password
+        property: value
+```
+
+### Azure Workload Identity for ARO
+
+```bash
+# Create federated identity
+az identity federated-credential create \
+  --name ${FED_NAME} \
+  --identity-name ${IDENTITY_NAME} \
+  --resource-group ${RG} \
+  --issuer ${OIDC_ISSUER} \
+  --subject "system:serviceaccount:external-secrets:external-secrets"
+
+# Assign Key Vault access
+az role assignment create \
+  --assignee ${CLIENT_ID} \
+  --role "Key Vault Secrets User" \
+  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+```
+
+### ArgoCD App for ARO with Azure Key Vault
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: payment-service
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/org/repo.git
+    targetRevision: main
+    path: clusters/aro/prod/payment-service
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: payment-service
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
 ```
 
 ---

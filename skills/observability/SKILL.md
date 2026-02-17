@@ -51,6 +51,8 @@ Incident response is your battle. Post-mortems are your peace.
 - Post-incident review and Root Cause Analysis (RCA)
 - OpenShift integrated monitoring stack
 - Distributed tracing (Jaeger, Tempo)
+- Azure Monitor and Azure Log Analytics
+- AWS CloudWatch and X-Ray
 
 ### What You Care About
 - Signal over noise — actionable alerts only
@@ -526,6 +528,210 @@ bash scripts/incident-report.sh "Payment API Outage" P1 production payment-servi
 ## Lessons Learned
 - What went well?
 - What could be improved?
+```
+
+---
+
+## 9. AZURE MONITOR (For ARO)
+
+### Azure Monitor Metrics
+
+```bash
+# Get Azure Monitor metrics via REST API
+curl -s -H "Authorization: Bearer ${AZURE_TOKEN}" \
+  "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.ContainerService/managedClusters/${CLUSTER}/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=node_cpu_usage_millicores,node_memory_rss_bytes" | jq .
+
+# List metric definitions
+az monitor metrics list-definitions \
+  --resource /subscriptions/${SUB_ID}/resourcegroups/${RG}/providers/microsoft.containerservice/managedclusters/${CLUSTER}
+
+# Query metrics
+az monitor metrics query \
+  --resource /subscriptions/${SUB_ID}/resourcegroups/${RG}/providers/microsoft.containerservice/managedclusters/${CLUSTER} \
+  --namespace "Insights.container/nodes" \
+  --metric-names "cpuExceeded,memoryExceeded" \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --aggregation Average
+```
+
+### Azure Log Analytics
+
+```bash
+# Query Container Insights logs
+az monitor app-insights show -g ${RG} -n ${APP_INSIGHTS} 2>/dev/null || true
+
+# Query Log Analytics workspace
+az monitor log-analytics query \
+  --workspace ${WORKSPACE_ID} \
+  --analytics-query "ContainerInventory | where TimeGenerated > ago(1h)"
+
+# Get cluster events
+az monitor log-analytics query \
+  --workspace ${WORKSPACE_ID} \
+  --analytics-query "KubeEvents | where TimeGenerated > ago(1h) | where ClusterId == '${CLUSTER}'"
+
+# Get container logs
+az monitor log-analytics query \
+  --workspace ${WORKSPACE_ID} \
+  --analytics-query "ContainerLog | where TimeGenerated > ago(1h) | where ContainerName == '${CONTAINER}' | limit 100"
+
+# Get pod status
+az monitor log-analytics query \
+  --workspace ${WORKSPACE_ID} \
+  --analytics-query "KubePodInventory | where TimeGenerated > ago(1h) | where ClusterId == '${CLUSTER}' | summarize count() by PodStatus"
+```
+
+### Azure Container Insights
+
+```bash
+# Enable Container Insights
+az monitor app-insights component create \
+  --app ${APP_INSIGHTS} \
+  --location ${LOCATION} \
+  --resource-group ${RG}
+
+# Check Container Insights status
+az containerinsight show \
+  --resource-group ${RG} \
+  --cluster-name ${CLUSTER}
+
+# Get recommended alerts
+az monitor metrics alert list -g ${RG} -o table
+
+# Create metric alert
+az monitor metrics alert create \
+  -n "high-cpu-alert" \
+  -g ${RG} \
+  --condition "avg CPU > 80" \
+  --description "CPU usage exceeded 80%"
+```
+
+---
+
+## 10. AWS CLOUDWATCH (For ROSA)
+
+### CloudWatch Metrics
+
+```bash
+# Get cluster metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ContainerInsights \
+  --metric-name cluster_failed_node_count \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average,Maximum
+
+# Get node metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ContainerInsights \
+  --metric-name node_cpu_utilization \
+  --dimensions "Name=ClusterName,Value=${CLUSTER};Name=NodeName,Value=${NODE}" \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average
+
+# Get pod metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ContainerInsights \
+  --metric-name pod_cpu_utilization \
+  --dimensions "Name=ClusterName,Value=${CLUSTER};Name=Namespace,Value=${NAMESPACE};Name=PodName,Value=${POD}" \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average
+
+# Get service mesh metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/AppMesh \
+  --metric-name request_count \
+  --dimensions "Name=mesh,Value=${MESH};Name=virtualNode,Value=${NODE}" \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 60 \
+  --statistics Sum
+```
+
+### CloudWatch Logs
+
+```bash
+# List log groups
+aws logs describe-log-groups --log-group-name-prefix /aws/rosa/ --output table
+
+# Get cluster logs
+aws logs get-log-events \
+  --log-group-name /aws/rosa/${CLUSTER}/api \
+  --log-stream-name kube-apiserver-audit \
+  --limit 50
+
+# Query logs with filter pattern
+aws logs filter-log-events \
+  --log-group-name /aws/rosa/${CLUSTER}/containers \
+  --filter-pattern "[timestamp, level, message]" \
+  --start-time $(date -u -v-1H +%s)000 \
+  --end-time $(date -u +%s)000
+
+# Get container runtime logs
+aws logs get-log-events \
+  --log-group-name /aws/rosa/${CLUSTER}/runtime \
+  --log-stream-name kubelet/${NODE} \
+  --limit 100
+```
+
+### CloudWatch Alarms
+
+```bash
+# List alarms
+aws cloudwatch describe-alarms --alarm-name-prefix rosa-
+
+# Create CPU alarm
+aws cloudwatch put-metric-alarm \
+  --alarm-name "rosa-${CLUSTER}-high-cpu" \
+  --alarm-description "CPU usage exceeded 80%" \
+  --metric-name node_cpu_utilization \
+  --namespace AWS/ContainerInsights \
+  --statistic Average \
+  --period 300 \
+  --threshold 80 \
+  --comparison-operator GreaterThanThreshold \
+  --dimensions "Name=ClusterName,Value=${CLUSTER}" \
+  --evaluation-periods 2 \
+  --alarm-actions ${SNS_ARN}
+
+# Create memory alarm
+aws cloudwatch put-metric-alarm \
+  --alarm-name "rosa-${CLUSTER}-high-memory" \
+  --alarm-description "Memory usage exceeded 85%" \
+  --metric-name node_memory_utilization \
+  --namespace AWS/ContainerInsights \
+  --statistic Average \
+  --period 300 \
+  --threshold 85 \
+  --comparison-operator GreaterThanThreshold \
+  --dimensions "Name=ClusterName,Value=${CLUSTER}" \
+  --evaluation-periods 2
+```
+
+### AWS X-Ray
+
+```bash
+# Get trace summary
+aws xray get-trace-summaries \
+  --start-time $(date -u -v-1H +%s) \
+  --end-time $(date -u +%s) \
+  --time-range-type TraceId
+
+# Get service graph
+aws xray get-service-graph \
+  --start-time $(date -u -v-1H +%s) \
+  --end-time $(date -u +%s) \
+  --graph-name ${CLUSTER}
+
+# Get trace segment
+aws xray get-trace-segment \
+  --trace-id ${TRACE_ID}
 ```
 
 ---

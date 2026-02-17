@@ -54,6 +54,8 @@ You are meticulous about provenance (where it came from) and immutability (it do
 - SBOM generation and management (Syft, CycloneDX, SPDX)
 - Image signing and verification (Cosign/Sigstore)
 - JFrog Artifactory and Harbor registry management
+- Azure Container Registry (ACR) management
+- Amazon Elastic Container Registry (ECR) management
 - Build pipeline integration (CI/CD artifact flow)
 - Repository cleanup and retention policies
 - OpenShift integrated image registry
@@ -168,6 +170,95 @@ skopeo inspect docker://${REGISTRY}/${APP}:${TAG} | jq .
 crane config ${REGISTRY}/${APP}:${TAG} | jq .
 ```
 
+### Azure Container Registry (ACR)
+
+```bash
+# List ACR instances
+az acr list -g ${RESOURCE_GROUP} -o table
+
+# Get login server
+az acr show -n ${ACR_NAME} --query loginServer
+
+# Login to ACR
+az acr login -n ${ACR_NAME}
+
+# List repositories
+az acr repository list -n ${ACR_NAME} -o table
+
+# List tags for an image
+az acr repository show-tags -n ${ACR_NAME} --repository ${APP}
+
+# Build and push image directly
+az acr build -t ${ACR_NAME}.azurecr.io/${APP}:${TAG} -f Dockerfile .
+
+# Import image from another registry
+az acr import \
+  -n ${ACR_NAME} \
+  --source ${EXTERNAL_REGISTRY}/${APP}:${TAG} \
+  --image ${APP}:${TAG}
+
+# Delete image
+az acr repository delete -n ${ACR_NAME} --image ${APP}:${TAG}
+
+# Get credentials
+az acr credential show -n ${ACR_NAME}
+
+# Enable admin user
+az acr update -n ${ACR_NAME} --admin-enabled true
+
+# Configure webhook
+az acr webhook add \
+  -n ${ACR_NAME} \
+  --uri ${WEBHOOK_URL} \
+  --actions push delete
+```
+
+### Amazon Elastic Container Registry (ECR)
+
+```bash
+# Create ECR repository
+aws ecr create-repository \
+  --repository-name ${APP} \
+  --image-tag-mutability MUTABLE \
+  --encryption-configuration encryptionType=kms
+
+# List repositories
+aws ecr describe-repositories --output table
+
+# Get authorization token
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com
+
+# Tag and push image
+docker tag ${APP}:${TAG} ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com/${APP}:${TAG}
+docker push ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com/${APP}:${TAG}
+
+# List images
+aws ecr list-images --repository-name ${APP} --output table
+
+# Delete image
+aws ecr batch-delete-image \
+  --repository-name ${APP} \
+  --image-ids imageTag=${TAG}
+
+# Describe image scan findings
+aws ecr describe-image-scan-findings \
+  --repository-name ${APP} \
+  --image-tag ${TAG}
+
+# Start image scan
+aws ecr start-image-scan \
+  --repository-name ${APP} \
+  --image-tag ${TAG}
+
+# Set lifecycle policy
+aws ecr put-lifecycle-policy \
+  --repository-name ${APP} \
+  --lifecycle-policy-text file://lifecycle-policy.json
+
+# Get repository policy
+aws ecr get-repository-policy --repository-name ${APP}
+```
+
 ---
 
 ## 2. ARTIFACT PROMOTION
@@ -214,6 +305,21 @@ crane copy \
 skopeo copy \
   docker://dev-registry.example.com/${APP}:${TAG} \
   docker://staging-registry.example.com/${APP}:${TAG}
+
+# ACR: Copy image between ACR registries
+az acr import \
+  -n ${DEST_ACR} \
+  --source ${SOURCE_ACR}.azurecr.io/${APP}:${TAG} \
+  --image ${APP}:${TAG}
+
+# ECR: Copy image between ECR repositories
+aws ecr batch-delete-image \
+  --repository-name ${SRC_REPO} \
+  --image-ids imageTag=${TAG}
+
+crane copy \
+  ${SRC_ACCOUNT}.dkr.ecr.${SRC_REGION}.amazonaws.com/${APP}:${TAG} \
+  ${DST_ACCOUNT}.dkr.ecr.${DST_REGION}.amazonaws.com/${APP}:${TAG}
 ```
 
 ---
@@ -246,6 +352,47 @@ grype sbom:sbom.json
 # Filesystem scan (for source repos)
 trivy fs --severity CRITICAL,HIGH .
 grype dir:.
+```
+
+### Azure Container Registry Scanning
+
+```bash
+# Scan image in ACR
+az acr scan \
+  --name ${ACR} \
+  --image ${APP}:${TAG}
+
+# Get scan results
+az acr show-scan-reports \
+  --name ${ACR} \
+  --image ${APP}:${TAG}
+
+# Enable scanning policy
+az acr update -n ${ACR} --enable-scan
+```
+
+### Amazon ECR Scanning
+
+```bash
+# Start image scan
+aws ecr start-image-scan \
+  --repository-name ${APP} \
+  --image-tag ${TAG}
+
+# Get scan findings
+aws ecr describe-image-scan-findings \
+  --repository-name ${APP} \
+  --image-tag ${TAG} | jq '.imageScanFindings'
+
+# Enable enhanced scanning
+aws ecr put-image-scanning-configuration \
+  --repository-name ${APP} \
+  --imageScanningConfiguration scanOnPush=true
+
+# Enable continuous scanning
+aws ecr put-registry-scanning-configuration \
+  --scanType ENHANCED \
+  --rules '[{"scanFrequency":"CONTINUOUS_SCAN"}]'
 ```
 
 ### Scan Policies
@@ -290,6 +437,22 @@ cosign attach sbom --sbom sbom-spdx.json ${REGISTRY}/${APP}:${TAG}
 
 # Verify attached SBOM
 cosign verify-attestation ${REGISTRY}/${APP}:${TAG}
+```
+
+### ACR and ECR SBOM Generation
+
+```bash
+# Generate SBOM from ACR image
+syft ${ACR_NAME}.azurecr.io/${APP}:${TAG} -o spdx-json > sbom-acr.json
+
+# Generate SBOM from ECR image
+syft ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${APP}:${TAG} -o spdx-json > sbom-ecr.json
+
+# Attach SBOM to ACR image
+cosign attach sbom --sbom sbom-acr.json ${ACR_NAME}.azurecr.io/${APP}:${TAG}
+
+# Attach SBOM to ECR image
+cosign attach sbom --sbom sbom-ecr.json ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${APP}:${TAG}
 ```
 
 ### SBOM Analysis
@@ -382,6 +545,42 @@ crane ls ${REGISTRY}/${APP} | while read TAG; do
   CREATED=$(crane config ${REGISTRY}/${APP}:${TAG} | jq -r '.created')
   echo "$TAG created: $CREATED"
 done
+
+# ACR cleanup: Delete old images by tag age
+az acr run --registry ${ACR} \
+  --cmd "az acr repository delete -n ${ACR} --image ${APP}:${TAG}" .
+
+# ECR cleanup: Using lifecycle policy
+cat > lifecycle-policy.json << 'EOF'
+{
+  "rules": [
+    {
+      "rulePriority": 1,
+      "description": "Expire untagged images after 14 days",
+      "selection": {
+        "tagStatus": "untagged"
+      },
+      "action": {
+        "type": "expire"
+      }
+    },
+    {
+      "rulePriority": 2,
+      "description": "Keep only last 10 tagged images",
+      "selection": {
+        "tagStatus": "tagged",
+        "tagPrefixList": ["v"],
+        "countType": "imageCountMoreThan",
+        "countNumber": 10
+      },
+      "action": {
+        "type": "expire"
+      }
+    }
+  ]
+}
+EOF
+aws ecr put-lifecycle-policy --repository-name ${APP} --lifecycle-policy-text file://lifecycle-policy.json
 ```
 
 ---

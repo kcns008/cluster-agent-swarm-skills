@@ -215,6 +215,103 @@ gcloud container node-pools create ${POOL} \
   --machine-type ${MACHINE_TYPE} --num-nodes ${COUNT}
 ```
 
+### ROSA Node Management
+
+```bash
+# List node groups
+rosa list nodegroups --cluster ${CLUSTER}
+
+# Describe node group
+rosa describe nodegroup ${NODEGROUP} --cluster ${CLUSTER}
+
+# Scale node group
+rosa edit nodegroup ${NODEGROUP} --cluster ${CLUSTER} --min-replicas=${MIN} --max-replicas=${MAX}
+
+# Add node group
+rosa create nodegroup --cluster ${CLUSTER} \
+  --name ${NODEGROUP} \
+  --instance-type ${INSTANCE_TYPE} \
+  --replicas=${COUNT} \
+  --labels "node-role.kubernetes.io/worker="
+
+# Delete node group
+rosa delete nodegroup ${NODEGROUP} --cluster ${CLUSTER} --yes
+```
+
+### ROSA Cluster Management
+
+```bash
+# List ROSA clusters
+rosa list clusters
+
+# Describe cluster
+rosa describe cluster --cluster ${CLUSTER}
+
+# Show cluster credentials
+rosa show credentials --cluster ${CLUSTER}
+
+# Check cluster status
+rosa list cluster --output json | jq '.[] | select(.id=="${CLUSTER}")'
+
+# Upgrade ROSA cluster
+rosa upgrade cluster --cluster ${CLUSTER}
+
+# Upgrade node group
+rosa upgrade nodegroup ${NODEGROUP} --cluster ${CLUSTER}
+
+# List available upgrades
+rosa list upgrade --cluster ${CLUSTER}
+```
+
+### ROSA STS (Secure Token Service) Management
+
+```bash
+# List OIDC providers
+rosa list oidc-provider --cluster ${CLUSTER}
+
+# List IAM roles
+rosa list iam-roles --cluster ${CLUSTER}
+
+# Check account-wide IAM roles
+rosa list account-roles
+```
+
+### ARO Cluster Management
+
+```bash
+# List ARO clusters
+az aro list -g ${RESOURCE_GROUP} -o table
+
+# Describe ARO cluster
+az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} -o json
+
+# Check ARO cluster credentials
+az aro list-credentials -g ${RESOURCE_GROUP} -n ${CLUSTER} -o json
+
+# Get API server URL
+az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} --query 'apiserverProfile.url'
+
+# Get console URL
+az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} --query 'consoleProfile.url'
+```
+
+### ARO Node Management
+
+```bash
+# List machine pools
+az aro machinepool list -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} -o table
+
+# Get machine pool details
+az aro machinepool show -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} -n ${POOL} -o json
+
+# Scale machine pool
+az aro machinepool update -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} -n ${POOL} --replicas=${COUNT}
+
+# Add machine pool
+az aro machinepool create -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} \
+  -n ${POOL} --replicas=${COUNT} --vm-size ${VM_SIZE}
+```
+
 ---
 
 ## 2. CLUSTER UPGRADES
@@ -298,6 +395,41 @@ gcloud container clusters upgrade ${CLUSTER} --master --cluster-version ${VERSIO
 
 # Upgrade node pool
 gcloud container clusters upgrade ${CLUSTER} --node-pool ${POOL} --cluster-version ${VERSION} --region ${REGION}
+```
+
+### ROSA Upgrades
+
+```bash
+# List available upgrades
+rosa list upgrade --cluster ${CLUSTER}
+
+# Check current version
+rosa describe cluster --cluster ${CLUSTER} | grep "Version"
+
+# Upgrade cluster (control plane)
+rosa upgrade cluster --cluster ${CLUSTER} --version ${VERSION}
+
+# Upgrade node group
+rosa upgrade nodegroup ${NODEGROUP} --cluster ${CLUSTER}
+
+# Monitor upgrade status
+rosa describe cluster --cluster ${CLUSTER}
+```
+
+### ARO Upgrades
+
+```bash
+# Check available upgrades
+az aro get-upgrades -g ${RESOURCE_GROUP} -n ${CLUSTER} -o table
+
+# Upgrade ARO cluster
+az aro upgrade -g ${RESOURCE_GROUP} -n ${CLUSTER} --kubernetes-version ${VERSION}
+
+# Monitor upgrade status
+az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} --query 'provisioningState'
+
+# Get upgrade history
+az aro list-upgrades -g ${RESOURCE_GROUP} -n ${CLUSTER} -o table
 ```
 
 ---
@@ -552,6 +684,203 @@ velero backup describe ${BACKUP_NAME}
 # Restore from Velero
 velero restore create --from-backup ${BACKUP_NAME}
 velero restore get
+```
+
+---
+
+## 9. AZURE CLOUD RESOURCES (For ARO)
+
+### Azure Resource Diagnostics
+
+```bash
+# List resources in resource group
+az resource list -g ${RESOURCE_GROUP} -o table
+
+# Check virtual machines
+az vm list -g ${RESOURCE_GROUP} -o table
+
+# Check virtual network
+az network vnet list -g ${RESOURCE_GROUP} -o table
+
+# Check network security groups
+az network nsg list -g ${RESOURCE_GROUP} -o table
+
+# Check load balancers
+az network lb list -g ${RESOURCE_GROUP} -o table
+
+# Check private endpoints
+az network private-endpoint list -g ${RESOURCE_GROUP} -o table
+
+# Check private DNS zones
+az network private-dns zone list -g ${RESOURCE_GROUP} -o table
+```
+
+### Azure Network Diagnostics
+
+```bash
+# Check VNet peering
+az network vnet peering list -g ${RESOURCE_GROUP} --vnet-name ${VNET}
+
+# Check ExpressRoute circuits
+az network express-route list -o table
+
+# Check VPN gateways
+az network vpn-connection list -g ${RESOURCE_GROUP} -o table
+
+# Check application gateways
+az network application-gateway list -g ${RESOURCE_GROUP} -o table
+
+# Check Azure Firewall
+az network firewall list -g ${RESOURCE_GROUP} -o table
+
+# Check Azure DNS
+az network dns record-set list -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -o table
+```
+
+### Azure Storage for Kubernetes
+
+```bash
+# Check storage accounts
+az storage account list -g ${RESOURCE_GROUP} -o table
+
+# Check blob services
+az storage blob service-properties show --account-name ${STORAGE_ACCOUNT}
+
+# Check file shares
+az storage share list --account-name ${STORAGE_ACCOUNT} -o table
+
+# Check managed disks
+az disk list -g ${RESOURCE_GROUP} -o table
+
+# Check Azure NetApp Files volumes
+az netappfiles volume list -g ${RESOURCE_GROUP} -a ${ACCOUNT} -o table
+```
+
+### Azure Monitoring for ARO
+
+```bash
+# Check Azure Monitor insights
+az monitor app-insights show -g ${RESOURCE_GROUP} -n ${APP_INSIGHTS}
+
+# Check Log Analytics workspace
+az monitor log-analytics workspace list -g ${RESOURCE_GROUP} -o table
+
+# Check metric alerts
+az monitor metrics alert list -g ${RESOURCE_GROUP} -o table
+
+# Check activity log
+az monitor activity-log list -g ${RESOURCE_GROUP} --query "[].operationName" -o table
+```
+
+---
+
+## 10. AWS CLOUD RESOURCES (For ROSA)
+
+### AWS VPC and Networking
+
+```bash
+# Describe VPC
+aws ec2 describe-vpcs --vpc-ids ${VPC_ID} --output table
+
+# List subnets
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+
+# Check route tables
+aws ec2 describe-route-tables --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+
+# Check security groups
+aws ec2 describe-security-groups --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+
+# Check NAT Gateways
+aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${VPC_ID}" --output table
+
+# Check Internet Gateways
+aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=${VPC_ID}" --output table
+
+# Check Transit Gateway attachments
+aws ec2 describe-transit-gateway-attachments --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+```
+
+### AWS IAM for ROSA
+
+```bash
+# List IAM roles with ROSA prefix
+aws iam list-roles | jq '.Roles[] | select(.RoleName | startswith("rosa"))'
+
+# List OIDC providers
+aws iam list-open-id-connect-providers
+
+# Get OIDC provider details
+aws iam get-open-id-connect-provider --open-id-connect-provider-arn ${PROVIDER_ARN}
+
+# Check IAM policies
+aws iam list-policies | jq '.Policies[] | select(.PolicyName | startswith("rosa"))'
+
+# Check service-linked roles
+aws iam list-roles --path-prefix=/aws-service-role/ | jq '.Roles[] | select(.RoleName | contains("rosa"))'
+```
+
+### AWS CloudWatch for ROSA
+
+```bash
+# List CloudWatch log groups
+aws logs describe-log-groups --log-group-name-prefix /aws/rosa/ --output table
+
+# Get cluster logs
+aws logs get-log-events \
+  --log-group-name /aws/rosa/${CLUSTER}/api \
+  --log-stream-name ${STREAM} \
+  --limit 50
+
+# Check metrics
+aws cloudwatch get-metric-statistics \
+  --namespace AWS/ContainerInsights \
+  --metric-name cpuReservation \
+  --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
+  --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
+  --period 300 \
+  --statistics Average
+
+# List alarms
+aws cloudwatch describe-alarms --alarm-name-prefix rosa-
+```
+
+### AWS S3 for Kubernetes
+
+```bash
+# List S3 buckets
+aws s3 ls
+
+# Check bucket policy
+aws s3api get-bucket-policy --bucket ${BUCKET} --query Policy --output json | jq '.'
+
+# Check bucket versioning
+aws s3api get-bucket-versioning --bucket ${BUCKET}
+
+# Check bucket encryption
+aws s3api get-bucket-encryption --bucket ${BUCKET}
+
+# Check bucket lifecycle
+aws s3api get-bucket-lifecycle-configuration --bucket ${BUCKET}
+```
+
+### AWS RDS for Kubernetes
+
+```bash
+# List RDS instances
+aws rds describe-db-instances --output table
+
+# Check DB subnet groups
+aws rds describe-db-subnet-groups --output table
+
+# Check DB security groups
+aws rds describe-db-security-groups --output table
+
+# Check RDS performance insights
+aws pi describe-dimension-keys \
+  --service-type RDS \
+  --db-instance-identifier ${DB_INSTANCE} \
+  --metric-name db.load.avg
 ```
 
 ---

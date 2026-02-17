@@ -47,13 +47,14 @@ Compliance is non-negotiable. You sleep better when security scores are green.
 - Pod Security Standards (PSS) and Pod Security Admission (PSA)
 - RBAC role binding and least privilege enforcement
 - Network policy enforcement and zero-trust networking
-- Secrets management (HashiCorp Vault, External Secrets Operator)
+- Secrets management (HashiCorp Vault, Azure Key Vault, AWS Secrets Manager)
 - Security policy validation (Kyverno, OPA Gatekeeper)
 - Image signing and verification (Cosign, Sigstore, Notary)
 - Container vulnerability scanning (Trivy, Grype)
 - Compliance auditing and reporting (CIS, SOC2, PCI-DSS, HIPAA)
 - OpenShift Security Context Constraints (SCCs)
 - Runtime security (Falco)
+- Azure Security Center and AWS Security Hub
 
 ### What You Care About
 - Security before convenience — always
@@ -356,6 +357,228 @@ spec:
 ### Use the bundled rotation helper:
 ```bash
 bash scripts/secret-rotation.sh ${APP_NAME} ${NAMESPACE}
+```
+
+---
+
+## 4B. AWS SECRETS MANAGER (For ROSA)
+
+### AWS Secrets Manager Operations
+
+```bash
+# Create secret
+aws secretsmanager create-secret \
+  --name "prod/${APP_NAME}/db-credentials" \
+  --description "Database credentials for ${APP_NAME}" \
+  --secret-string '{"username":"appuser","password":"changeme","host":"db.example.com","port":5432}'
+
+# Get secret value
+aws secretsmanager get-secret-value \
+  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --query SecretString \
+  --output text
+
+# Update secret
+aws secretsmanager update-secret \
+  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --secret-string '{"username":"appuser","password":"newpassword","host":"db.example.com","port":5432}'
+
+# Rotate secret automatically
+aws secretsmanager rotate-secret \
+  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --rotation-lambda-arn arn:aws:lambda:us-east-1:123456789012:function:rotation-function
+
+# Delete secret (with recovery window)
+aws secretsmanager delete-secret \
+  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --recovery-window-in-days 7
+```
+
+### IAM Policy for Secrets Manager
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/${APP_NAME}/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:PutSecretValue",
+        "secretsmanager:UpdateSecret"
+      ],
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/${APP_NAME}/*"
+    }
+  ]
+}
+```
+
+### External Secrets Operator with AWS Secrets Manager
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: aws-secrets-manager
+spec:
+  provider:
+    aws:
+      service: SecretsManager
+      region: us-east-1
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ${APP_NAME}-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  target:
+    name: ${APP_NAME}-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: prod/${APP_NAME}/db-credentials
+        property: password
+```
+
+---
+
+## 4C. AZURE KEY VAULT (For ARO)
+
+### Azure Key Vault Operations
+
+```bash
+# Create Key Vault
+az keyvault create \
+  --name ${KV_NAME} \
+  --resource-group ${RG} \
+  --location ${LOCATION} \
+  --enable-rbac-authorization true
+
+# Set secret
+az keyvault secret set \
+  --vault-name ${KV_NAME} \
+  --name "db-password" \
+  --value "changeme" \
+  --description "Database password for ${APP_NAME}"
+
+# Get secret
+az keyvault secret show \
+  --vault-name ${KV_NAME} \
+  --name "db-password" \
+  --query value \
+  --output tsv
+
+# Update secret
+az keyvault secret set \
+  --vault-name ${KV_NAME} \
+  --name "db-password" \
+  --value "newpassword"
+
+# Enable secret versioning
+az keyvault secret set-attributes \
+  --vault-name ${KV_NAME} \
+  --name "db-password" \
+  --enabled true
+
+# Delete secret (soft delete enabled by default)
+az keyvault secret delete \
+  --vault-name ${KV_NAME} \
+  --name "db-password"
+
+# Purge deleted secret
+az keyvault secret purge \
+  --vault-name ${KV_NAME} \
+  --name "db-password"
+```
+
+### Azure RBAC for Key Vault
+
+```bash
+# Assign Key Vault Secrets User role to service principal
+az role assignment create \
+  --assignee ${CLIENT_ID} \
+  --role "Key Vault Secrets User" \
+  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+
+# Assign Key Vault Contributor role
+az role assignment create \
+  --assignee ${CLIENT_ID} \
+  --role "Key Vault Contributor" \
+  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+```
+
+### Azure Workload Identity Setup
+
+```bash
+# Create managed identity
+az identity create \
+  --name ${IDENTITY_NAME} \
+  --resource-group ${RG}
+
+# Get client ID
+CLIENT_ID=$(az identity show -n ${IDENTITY_NAME} -g ${RG} --query clientId -o tsv)
+
+# Create federated identity credential
+az identity federated-credential create \
+  --name "kubernetes-federated-credential" \
+  --identity-name ${IDENTITY_NAME} \
+  --resource-group ${RG} \
+  --issuer "https://kubernetes.default.svc" \
+  --subject "system:serviceaccount:${NAMESPACE}:${SERVICE_ACCOUNT}"
+
+# Assign role to managed identity
+az role assignment create \
+  --assignee ${CLIENT_ID} \
+  --role "Key Vault Secrets User" \
+  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+```
+
+### External Secrets Operator with Azure Key Vault
+
+```yaml
+apiVersion: external-secrets.io/v1beta1
+kind: ClusterSecretStore
+metadata:
+  name: azure-key-vault
+spec:
+  provider:
+    azure:
+      tenantId: ${AZURE_TENANT_ID}
+      clientId: ${AZURE_CLIENT_ID}
+      clientSecret:
+        name: azure-sp-secret
+        namespace: external-secrets
+      vaultUrl: "https://${KV_NAME}.vault.azure.net"
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: ${APP_NAME}-secrets
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: azure-key-vault
+    kind: ClusterSecretStore
+  target:
+    name: ${APP_NAME}-secrets
+    creationPolicy: Owner
+  data:
+    - secretKey: DB_PASSWORD
+      remoteRef:
+        key: db-password
+        property: value
 ```
 
 ---

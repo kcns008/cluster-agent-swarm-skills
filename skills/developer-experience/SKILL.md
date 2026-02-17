@@ -52,6 +52,8 @@ You're friendly but you enforce platform guardrails.
 - CI/CD pipeline debugging
 - OpenShift project setup and developer console guidance
 - Backstage / Developer Portal support
+- Azure resource provisioning (ACR, Key Vault, Azure DB)
+- AWS resource provisioning (ECR, Secrets Manager, RDS)
 
 ### What You Care About
 - Developer velocity and productivity
@@ -633,3 +635,183 @@ Run any script:
 ```bash
 bash scripts/<script-name>.sh [arguments]
 ```
+
+---
+
+## 7. AZURE RESOURCES FOR DEVELOPERS (ARO)
+
+### Azure Container Registry (ACR)
+
+```bash
+# List ACR instances
+az acr list -g ${RG} -o table
+
+# Get login server
+az acr show -n ${ACR_NAME} --query loginServer
+
+# Build and push image
+az acr build -t ${ACR_NAME}.azurecr.io/${APP}:${TAG} -f Dockerfile .
+
+# Create repository
+az acr repository create --name ${ACR_NAME} --image ${APP}:${TAG}
+
+# List images
+az acr repository list -n ${ACR_NAME} -o table
+
+# Get pull credentials
+az acr credential show -n ${ACR_NAME}
+```
+
+### Azure Database for PostgreSQL/MySQL
+
+```bash
+# Create PostgreSQL server
+az postgres flexible-server create \
+  --name ${DB_NAME} \
+  --resource-group ${RG} \
+  --sku-name Standard_B1ms \
+  --tier Burstable
+
+# Get connection string
+az postgres flexible-server show-connection-string \
+  --name ${DB_NAME} \
+  --admin-user ${ADMIN_USER}
+
+# Configure firewall
+az postgres flexible-server firewall-rule create \
+  --name ${DB_NAME} \
+  --rule-name allow-access \
+  --start-ip-address 0.0.0.0 \
+  --end-ip-address 255.255.255.255
+```
+
+### Azure Key Vault for Developers
+
+```bash
+# Create key vault
+az keyvault create --name ${KV_NAME} --resource-group ${RG}
+
+# Set secret
+az keyvault secret set --vault-name ${KV_NAME} --name "api-key" --value "xxx"
+
+# Get secret
+az keyvault secret show --vault-name ${KV_NAME} --name "api-key" --query value
+
+# Create access policy
+az keyvault set-policy \
+  --name ${KV_NAME} \
+  --upn ${USER_EMAIL} \
+  --secret-permissions get list
+```
+
+### Azure Storage for Developers
+
+```bash
+# Create storage account
+az storage account create \
+  --name ${STORAGE_NAME} \
+  --resource-group ${RG} \
+  --sku Standard_LRS
+
+# Get connection string
+az storage account show-connection-string \
+  --name ${STORAGE_NAME} \
+  --query connectionString
+
+# Create blob container
+az storage container create --name ${CONTAINER} --connection-string ${CONN_STR}
+```
+
+---
+
+## 8. AWS RESOURCES FOR DEVELOPERS (ROSA)
+
+### Amazon ECR
+
+```bash
+# Create ECR repository
+aws ecr create-repository --repository-name ${APP} --image-tag-mutability MUTABLE
+
+# Get login password
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com
+
+# Push image
+docker tag ${APP}:${TAG} ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com/${APP}:${TAG}
+docker push ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com/${APP}:${TAG}
+
+# List images
+aws ecr list-images --repository-name ${APP}
+
+# Scan image for vulnerabilities
+aws ecr start-image-scan --repository-name ${APP} --image-tag ${TAG}
+
+# Get scan findings
+aws ecr describe-image-scan-findings --repository-name ${APP} --image-tag ${TAG}
+```
+
+### AWS RDS
+
+```bash
+# Create PostgreSQL instance
+aws rds create-db-instance \
+  --db-instance-identifier ${DB_NAME} \
+  --db-instance-class db.t3.micro \
+  --engine postgres \
+  --engine-version 15.3 \
+  --allocated-storage 20 \
+  --master-username ${ADMIN_USER} \
+  --master-user-password ${PASSWORD}
+
+# Get connection endpoint
+aws rds describe-db-instances \
+  --db-instance-identifier ${DB_NAME} \
+  --query 'DBInstances[0].Endpoint.Address'
+
+# Create subnet group
+aws rds create-db-subnet-group \
+  --db-subnet-group-name ${DB_NAME}-subnet \
+  --subnet-ids ${SUBNET_IDS} \
+  --description "Subnet group for ${DB_NAME}"
+```
+
+### AWS Secrets Manager for Developers
+
+```bash
+# Create secret
+aws secretsmanager create-secret \
+  --name "dev/${APP}/api-keys" \
+  --secret-string '{"api_key":"xxx","api_secret":"yyy"}'
+
+# Get secret
+aws secretsmanager get-secret-value --secret-id "dev/${APP}/api-keys"
+
+# Update secret
+aws secretsmanager update-secret \
+  --secret-id "dev/${APP}/api-keys" \
+  --secret-string '{"api_key":"new_key","api_secret":"new_secret"}'
+```
+
+### AWS S3 for Developers
+
+```bash
+# Create bucket
+aws s3 mb s3://${BUCKET_NAME}
+
+# Upload file
+aws s3 cp file.txt s3://${BUCKET_NAME}/
+
+# List objects
+aws s3 ls s3://${BUCKET_NAME}/
+
+# Generate presigned URL
+aws s3 presign s3://${BUCKET_NAME}/file.txt --expires-in 3600
+
+# Enable versioning
+aws s3api put-bucket-versioning \
+  --bucket ${BUCKET_NAME} \
+  --versioning-configuration Status=Enabled
+```
+
+---
+
+## Helper Scripts
