@@ -270,6 +270,110 @@ When requesting approval, agents MUST provide:
 
 ---
 
+## CONTEXT WINDOW MANAGEMENT
+
+> Based on Anthropic's research on effective harnesses for long-running agents.
+
+### The Problem
+
+Agents must work across multiple context windows (sessions). Each new session starts with NO memory of what happened before. Without proper management, agents:
+- Try to do too much at once (one-shot the task)
+- Leave the environment in a broken state
+- Lose track of what's been done
+- Cannot recover from context overflow
+
+### Session Start Protocol
+
+Every session MUST begin with:
+
+```bash
+# 1. Get bearings
+pwd
+ls -la
+
+# 2. Read progress file
+cat working/WORKING.md
+
+# 3. Read recent logs
+cat logs/LOGS.md | head -100
+
+# 4. Check for incidents
+cat incidents/INCIDENTS.md | head -50
+
+# 5. Check git history
+git log --oneline -10
+```
+
+### Session End Protocol
+
+Before ending ANY session, you MUST:
+
+1. **Update WORKING.md** - Document completed, remaining, blockers
+2. **Commit to git** - `git add -A && git commit -m "agent:NAME: $(date) - summary"`
+3. **Update LOGS.md** - Log action, result, next step
+4. **NEVER skip** - Skipping loses all progress
+
+### Progress Tracking (WORKING.md)
+
+```
+## Agent: {agent-name}
+
+### Current Session
+- Started: {ISO timestamp}
+- Task: {what you're working on}
+
+### Completed This Session
+- {item 1}
+- {item 2}
+
+### Remaining Tasks
+- {item 1}
+
+### Blockers
+- {blocker if any}
+
+### Next Action
+{what next session should do}
+```
+
+### Context Conservation Rules
+
+| Rule | Why |
+|------|-----|
+| Work on ONE task at a time | Prevents context overflow |
+| Commit after each subtask | Enables recovery from context loss |
+| Update WORKING.md frequently | Next agent knows state |
+| NEVER skip session end protocol | Loses all progress |
+| Keep summaries concise | Fits in context |
+
+### Context Warning Signs
+
+RESTART the session if you see:
+- Token count > 80% of limit
+- Repetitive tool calls without progress
+- Losing track of original task
+- "One more thing" syndrome
+
+### Emergency Context Recovery
+
+If context is getting full:
+1. STOP immediately
+2. Commit current progress to git
+3. Update WORKING.md with exact state
+4. End session (let next agent pick up)
+5. NEVER continue and risk losing work
+
+### File Locations
+
+| File | Purpose |
+|------|---------|
+| `working/WORKING.md` | Per-session progress tracking |
+| `logs/LOGS.md` | Action audit trail |
+| `incidents/INCIDENTS.md` | Production issues |
+| `memory/MEMORY.md` | Long-term learnings |
+
+---
+
 ## EMERGENCY PROTOCOL
 
 ### If Something Goes Wrong

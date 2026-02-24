@@ -347,6 +347,102 @@ Affected: {service/application}
 
 ---
 
+## 8. CONTEXT WINDOW MANAGEMENT
+
+> CRITICAL: This section ensures agents work effectively across multiple context windows.
+
+### Session Start Protocol
+
+Every session MUST begin by reading the progress file:
+
+```bash
+# 1. Get your bearings
+pwd
+ls -la
+
+# 2. Read progress file for current agent
+cat working/WORKING.md
+
+# 3. Read global logs for context
+cat logs/LOGS.md | head -100
+
+# 4. Check for any incidents since last session
+cat incidents/INCIDENTS.md | head -50
+```
+
+### Session End Protocol
+
+Before ending ANY session, you MUST:
+
+```bash
+# 1. Update WORKING.md with current status
+#    - What you completed
+#    - What remains
+#    - Any blockers
+
+# 2. Commit changes to git
+git add -A
+git commit -m "agent:orchestrator: $(date -u +%Y%m%d-%H%M%S) - {summary}"
+
+# 3. Update LOGS.md
+#    Log what you did, result, and next action
+```
+
+### Progress Tracking
+
+The WORKING.md file is your single source of truth:
+
+```
+## Agent: {agent-name}
+
+### Current Session
+- Started: {ISO timestamp}
+- Task: {what you're working on}
+
+### Completed This Session
+- {item 1}
+- {item 2}
+
+### Remaining Tasks
+- {item 1}
+- {item 2}
+
+### Blockers
+- {blocker if any}
+
+### Next Action
+{what the next session should do}
+```
+
+### Context Conservation Rules
+
+| Rule | Why |
+|------|-----|
+| Work on ONE task at a time | Prevents context overflow |
+| Commit after each subtask | Enables recovery from context loss |
+| Update WORKING.md frequently | Next agent knows state |
+| NEVER skip session end protocol | Loses all progress |
+| Keep summaries concise | Fits in context |
+
+### Context Warning Signs
+
+If you see these, RESTART the session:
+- Token count > 80% of limit
+- Repetitive tool calls without progress
+- Losing track of original task
+- "One more thing" syndrome
+
+### Emergency Context Recovery
+
+If context is getting full:
+1. STOP immediately
+2. Commit current progress to git
+3. Update WORKING.md with exact state
+4. End session (let next agent pick up)
+5. NEVER continue and risk losing work
+
+---
+
 ## Helper Scripts
 
 | Script | Purpose |
