@@ -344,6 +344,63 @@ and prints machine-readable JSON for CI/CD pipelines.
 
 ---
 
+## Tracking & Observability Infrastructure
+
+This repository includes a complete **agent memory and audit system** for swarm operations.
+
+### File Structure
+
+| Directory/File | Purpose |
+|----------------|---------|
+| `AGENTS.md` | Swarm configuration, capabilities, guardrails |
+| `QUICKREF.md` | One-page reference for agent operating rules |
+| `memory/MEMORY.md` | Persistent long-term learning |
+| `logs/LOGS.md` | Action audit trail for all agents |
+| `incidents/INCIDENTS.md` | Production incident tracking |
+| `troubleshooting/TROUBLESHOOTING.md` | Debug knowledge base |
+| `agents/AGENTS.md` | Per-agent status and action logging |
+
+### Agent Operating Rules
+
+#### Human Approval Required (NEVER skip)
+- Any deletion of resources (`kubectl delete`)
+- Production environment changes
+- RBAC role/rolebinding modifications
+- Secret handling (create/rotate)
+- Cluster-wide policy changes
+- Rollback operations in production
+
+#### Decision Classification
+| Type | Action Required |
+|------|-----------------|
+| CRITICAL | Human must approve BEFORE execution |
+| HIGH | Human must approve, can do prep work |
+| MEDIUM | Human notification required |
+| LOW | Agent can execute, must log |
+
+#### Before Any Cluster Action
+1. **READ** — Always read resource before modifying
+2. **CHECK** — Assess impact on cluster availability
+3. **LOG** — Document intent in `logs/LOGS.md`
+4. **APPROVE** — Request human approval if required
+5. **EXECUTE** — Apply change
+6. **VERIFY** — Confirm success
+7. **LOG** — Record result
+
+#### Emergency Protocol
+If something goes wrong: **STOP → ASSESS → LOG → ESCALATE → WAIT**
+
+### Logging Requirements
+
+Every agent action MUST be logged to:
+- `logs/LOGS.md` — Action audit trail
+- `agents/AGENTS.md` — Agent status update
+- `incidents/INCIDENTS.md` — If failure/issue occurs
+- `troubleshooting/TROUBLESHOOTING.md` — If new problem solved
+- `memory/MEMORY.md` — If important learning
+
+---
+
 ## Contributing
 
 1. Fork the repository
