@@ -32,7 +32,7 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
                             │
               ┌─────────────▼────────────────────────┐
               │      Your Kubernetes Clusters         │
-              │   OpenShift │ EKS │ AKS │ GKE │ ROSA │
+              │   OpenShift │ ARO │ EKS │ AKS │ GKE │ ROSA │
               └──────────────────────────────────────┘
 ```
 
