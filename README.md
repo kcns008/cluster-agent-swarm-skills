@@ -235,6 +235,32 @@ All agents read/write to a shared database of clusters, applications, work items
 ### Daily Standups
 An automated daily standup compiles completed work, in-progress items, blocked tasks, and items needing review.
 
+### Human Communication & Escalation
+Agents keep humans in the loop through integrated communication channels:
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Non-urgent requests, status updates | < 1 hour |
+| MS Teams | Non-urgent requests, status updates | < 1 hour |
+| PagerDuty | Production incidents, urgent escalation | Immediate |
+
+**Escalation Flow:**
+1. Agent detects issue requiring human input
+2. Send Slack/Teams message with approval request
+3. Wait for response (timeout varies by priority)
+4. If no response → Send reminder
+5. If still no response → Trigger PagerDuty incident
+
+**Response Timeouts:**
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 3-5 minutes | 5-10 minutes total |
+| HIGH | 10-15 minutes | 20-30 minutes total |
+| MEDIUM | 20-30 minutes | No escalation |
+
+All agents include Slack/MS Teams Block Kit templates for approval requests, status updates, and escalation alerts.
+
 ---
 
 ## Installation Options
