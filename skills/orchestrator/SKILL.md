@@ -443,6 +443,209 @@ If context is getting full:
 
 ---
 
+## 9. HUMAN COMMUNICATION & ESCALATION
+
+> Keep humans in the loop. Use Slack/Teams for async communication. Use PagerDuty for urgent escalation.
+
+### Communication Channels
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Non-urgent requests, status updates | < 1 hour |
+| MS Teams | Non-urgent requests, status updates | < 1 hour |
+| PagerDuty | Production incidents, urgent escalation | Immediate |
+| Email | Low priority, formal communication | < 24 hours |
+
+### Slack/MS Teams Message Templates
+
+#### Approval Request (Non-Blocking)
+
+```json
+{
+  "text": "🤖 *Agent Action Required*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Approval Request from {agent_name}*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Type:*\n{request_type}"},
+        {"type": "mrkdwn", "text": "*Target:*\n{target}"},
+        {"type": "mrkdwn", "text": "*Risk:*\n{risk_level}"},
+        {"type": "mrkdwn", "text": "*Deadline:*\n{response_deadline}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Current State:*\n```{current_state}```"
+      }
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Proposed Change:*\n```{proposed_change}```"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "✅ Approve"},
+          "style": "primary",
+          "action_id": "approve_{request_id}"
+        },
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "❌ Reject"},
+          "style": "danger",
+          "action_id": "reject_{request_id}"
+        },
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "📋 View Details"},
+          "url": "{detail_url}"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Escalation Alert
+
+```json
+{
+  "text": "🚨 *ESCALATION - {agent_name}*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*🚨 Escalation Alert*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Agent:*\n{agent_name}"},
+        {"type": "mrkdwn", "text": "*Severity:*\n{severity}"},
+        {"type": "mrkdwn", "text": "*Issue:*\n{issue_summary}"},
+        {"type": "mrkdwn", "text": "*Time:*\n{timestamp}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Details:*\n```{details}```"
+      }
+    }
+  ]
+}
+```
+
+#### Status Update (No Response Required)
+
+```json
+{
+  "text": "✅ *{agent_name} - Status Update*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*{agent_name} completed: {action_summary}*"
+      }
+    },
+    {
+      "type": "context",
+      "elements": [
+        {"type": "mrkdwn", "text": "Target: {target}"},
+        {"type": "mrkdwn", "text": "Result: {result}"}
+      ]
+    }
+  ]
+}
+```
+
+### PagerDuty Integration
+
+#### Triggering PagerDuty Alert
+
+```bash
+# Trigger PagerDuty incident
+curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "routing_key": "$PAGERDUTY_ROUTING_KEY",
+    "event_action": "trigger",
+    "payload": {
+      "summary": "{issue_summary}",
+      "severity": "{critical|error|warning|info}",
+      "source": "{agent_name}",
+      "custom_details": {
+        "agent": "{agent_name}",
+        "cluster": "{cluster_name}",
+        "issue": "{issue_details}",
+        "logs": "{log_url}"
+      }
+    },
+    "client": "cluster-agent-swarm",
+    "client_url": "{task_url}"
+  }'
+```
+
+#### Escalation Flow
+
+```
+1. Agent detects issue requiring human input
+2. Send Slack/Teams message with approval request
+3. Wait for response (timeout: 5 minutes for CRITICAL, 15 minutes for HIGH)
+4. If no response after timeout:
+   a. Send follow-up reminder to Slack/Teams
+   b. If still no response after 2nd timeout:
+      - Trigger PagerDuty incident
+      - Include all context in incident
+      - Tag with severity level
+5. Once human responds:
+   - Acknowledge in logs
+   - Execute or log rejection
+   - Send confirmation to Slack/Teams
+```
+
+### Response Timeouts
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 5 minutes | 10 minutes total |
+| HIGH | 15 minutes | 30 minutes total |
+| MEDIUM | 30 minutes | No escalation |
+| LOW | No escalation | No escalation |
+
+### Required Information in Alerts
+
+All human communication MUST include:
+- **Agent Name** - Who is requesting
+- **Action Type** - What needs approval
+- **Target** - What resource/cluster
+- **Current State** - What's happening now
+- **Proposed Change** - What will happen
+- **Risk Level** - LOW/MEDIUM/HIGH/CRITICAL
+- **Rollback Plan** - How to undo
+- **Deadline** - When response needed by
+- **Log Reference** - Link to full logs
+
+---
+
 ## Helper Scripts
 
 | Script | Purpose |

@@ -750,6 +750,135 @@ If context is getting full:
 
 ---
 
+## 13. HUMAN COMMUNICATION & ESCALATION
+
+> Keep humans in the loop. Use Slack/Teams for async communication. Use PagerDuty for urgent escalation.
+
+### Communication Channels
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Artifact promotion, CVE alerts | < 1 hour |
+| MS Teams | Artifact promotion, CVE alerts | < 1 hour |
+| PagerDuty | Critical CVE, urgent promotion | Immediate |
+
+### Slack/MS Teams Message Templates
+
+#### Approval Request (Artifact Promotion)
+
+```json
+{
+  "text": "📦 *Agent Action Required - Artifacts*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Approval Request from Cache (Artifacts)*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Type:*\n{request_type}"},
+        {"type": "mrkdwn", "text": "*Image:*\n{image_name}"},
+        {"type": "mrkdwn", "text": "*Source:*\n{source_env}"},
+        {"type": "mrkdwn", "text": "*Target:*\n{target_env}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Vulnerability Scan:*\n```{scan_results}```"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "✅ Approve"},
+          "style": "primary",
+          "action_id": "approve_{request_id}"
+        },
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "❌ Reject"},
+          "style": "danger",
+          "action_id": "reject_{request_id}"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### CVE Alert
+
+```json
+{
+  "text": "⚠️ *Cache - CVE Alert*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Critical vulnerability detected in {image_name}*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*CVE ID:*\n{cve_id}"},
+        {"type": "mrkdwn", "text": "*Severity:*\n{severity}"},
+        {"type": "mrkdwn", "text": "*CVSS:*\n{cvss_score}"}
+      ]
+    }
+  ]
+}
+```
+
+### PagerDuty Integration
+
+```bash
+curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "routing_key": "$PAGERDUTY_ROUTING_KEY",
+    "event_action": "trigger",
+    "payload": {
+      "summary": "[Cache] {issue_summary}",
+      "severity": "{critical|error|warning}",
+      "source": "cache-artifacts",
+      "custom_details": {
+        "agent": "Cache",
+        "image": "{image_name}",
+        "cve": "{cve_id}"
+      }
+    },
+    "client": "cluster-agent-swarm"
+  }'
+```
+
+### Escalation Flow
+
+1. Artifact promotion → Send Slack/Teams approval request
+2. Critical CVE detected → Immediately send alert
+3. Wait 10 minutes for promotion, 5 minutes for CRITICAL CVE
+4. No response → Trigger PagerDuty
+5. Execute or log rejection
+
+### Response Timeouts
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 5 minutes | 10 minutes total |
+| HIGH | 15 minutes | 30 minutes total |
+| MEDIUM | 30 minutes | No escalation |
+
+---
+
 ## Helper Scripts
 
 | Script | Purpose |

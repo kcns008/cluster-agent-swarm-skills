@@ -990,6 +990,126 @@ If context is getting full:
 
 ---
 
+## 16. HUMAN COMMUNICATION & ESCALATION
+
+> Keep humans in the loop. Use Slack/Teams for async communication. Use PagerDuty for urgent escalation.
+
+### Communication Channels
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Non-urgent requests, status updates | < 1 hour |
+| MS Teams | Non-urgent requests, status updates | < 1 hour |
+| PagerDuty | Production incidents, urgent escalation | Immediate |
+
+### Slack/MS Teams Message Templates
+
+#### Approval Request
+
+```json
+{
+  "text": "🤖 *Agent Action Required - GitOps*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Approval Request from Flow (GitOps)*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Type:*\n{request_type}"},
+        {"type": "mrkdwn", "text": "*Target:*\n{target}"},
+        {"type": "mrkdwn", "text": "*Risk:*\n{risk_level}"},
+        {"type": "mrkdwn", "text": "*Deadline:*\n{response_deadline}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Current State:*\n```{current_state}```\n\n*Proposed Change:*\n```{proposed_change}```"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "✅ Approve"},
+          "style": "primary",
+          "action_id": "approve_{request_id}"
+        },
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "❌ Reject"},
+          "style": "danger",
+          "action_id": "reject_{request_id}"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Status Update
+
+```json
+{
+  "text": "✅ *Flow - GitOps Status Update*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Flow completed: {action_summary}*"
+      }
+    }
+  ]
+}
+```
+
+### PagerDuty Integration
+
+```bash
+curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "routing_key": "$PAGERDUTY_ROUTING_KEY",
+    "event_action": "trigger",
+    "payload": {
+      "summary": "[Flow] {issue_summary}",
+      "severity": "{critical|error|warning|info}",
+      "source": "flow-gitops",
+      "custom_details": {
+        "agent": "Flow",
+        "application": "{app_name}",
+        "issue": "{issue_details}"
+      }
+    },
+    "client": "cluster-agent-swarm"
+  }'
+```
+
+### Escalation Flow
+
+1. Send Slack/Teams message (5 min CRITICAL, 15 min HIGH)
+2. No response → Send reminder
+3. Still no response → Trigger PagerDuty
+4. Human responds → Execute and confirm
+
+### Response Timeouts
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 5 minutes | 10 minutes total |
+| HIGH | 15 minutes | 30 minutes total |
+| MEDIUM | 30 minutes | No escalation |
+
+---
+
 ## Helper Scripts
 
 | Script | Purpose |

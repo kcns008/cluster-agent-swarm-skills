@@ -832,6 +832,118 @@ If context is getting full:
 
 ---
 
+## 15. HUMAN COMMUNICATION & ESCALATION
+
+> Keep humans in the loop. Use Slack/Teams for async communication. Use PagerDuty for urgent escalation.
+
+### Communication Channels
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Alert notifications, status updates | < 1 hour |
+| MS Teams | Alert notifications, status updates | < 1 hour |
+| PagerDuty | Production incidents, urgent escalation | Immediate |
+
+### Slack/MS Teams Message Templates
+
+#### Alert Notification
+
+```json
+{
+  "text": "📊 *Pulse - Alert Notification*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Alert detected by Pulse (Observability)*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Alert:*\n{alert_name}"},
+        {"type": "mrkdwn", "text": "*Severity:*\n{severity}"},
+        {"type": "mrkdwn", "text": "*Cluster:*\n{cluster}"},
+        {"type": "mrkdwn", "text": "*Service:*\n{service}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Details:*\n```{alert_details}```"
+      }
+    }
+  ]
+}
+```
+
+#### Incident Report Request
+
+```json
+{
+  "text": "📋 *Pulse - Incident Report Required*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Human input needed for incident: {incident_name}*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Timeline:*\n{timeline_summary}"},
+        {"type": "mrkdwn", "text": "*Impact:*\n{impact}"}
+      ]
+    }
+  ]
+}
+```
+
+### PagerDuty Integration
+
+```bash
+curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "routing_key": "$PAGERDUTY_ROUTING_KEY",
+    "event_action": "trigger",
+    "payload": {
+      "summary": "[Pulse] {alert_summary}",
+      "severity": "{critical|error|warning}",
+      "source": "pulse-observability",
+      "custom_details": {
+        "agent": "Pulse",
+        "alert": "{alert_name}",
+        "cluster": "{cluster}",
+        "metric": "{metric_value}"
+      }
+    },
+    "client": "cluster-agent-swarm"
+  }'
+```
+
+### Escalation Flow
+
+1. Alert detected → Send Slack/Teams notification
+2. If alert requires action → Send approval request
+3. Wait 5 min CRITICAL, 15 min HIGH
+4. No response → Trigger PagerDuty
+5. Resolution → Send status update
+
+### Response Timeouts
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 5 minutes | 10 minutes total |
+| HIGH | 15 minutes | 30 minutes total |
+| MEDIUM | 30 minutes | No escalation |
+
+---
+
 ## Helper Scripts
 
 | Script | Purpose |

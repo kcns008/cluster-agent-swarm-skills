@@ -988,6 +988,134 @@ If context is getting full:
 
 ---
 
+## 17. HUMAN COMMUNICATION & ESCALATION
+
+> Keep humans in the loop. Use Slack/Teams for async communication. Use PagerDuty for urgent escalation.
+
+### Communication Channels
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Non-urgent requests, status updates | < 1 hour |
+| MS Teams | Non-urgent requests, status updates | < 1 hour |
+| PagerDuty | Security incidents, urgent escalation | Immediate |
+
+### Slack/MS Teams Message Templates
+
+#### Approval Request (Security)
+
+```json
+{
+  "text": "🛡️ *Agent Action Required - Security*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Approval Request from Shield (Security)*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Type:*\n{request_type}"},
+        {"type": "mrkdwn", "text": "*Target:*\n{target}"},
+        {"type": "mrkdwn", "text": "*Risk:*\n{risk_level}"},
+        {"type": "mrkdwn", "text": "*Deadline:*\n{response_deadline}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Current State:*\n```{current_state}```\n\n*Proposed Change:*\n```{proposed_change}```"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "✅ Approve"},
+          "style": "primary",
+          "action_id": "approve_{request_id}"
+        },
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "❌ Reject"},
+          "style": "danger",
+          "action_id": "reject_{request_id}"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Security Alert (No Approval - Informational)
+
+```json
+{
+  "text": "🛡️ *Shield - Security Alert*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Security issue detected: {alert_summary}*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Severity:*\n{severity}"},
+        {"type": "mrkdwn", "text": "*Affected:*\n{affected_resources}"}
+      ]
+    }
+  ]
+}
+```
+
+### PagerDuty Integration (Security = High Priority)
+
+```bash
+curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "routing_key": "$PAGERDUTY_ROUTING_KEY",
+    "event_action": "trigger",
+    "payload": {
+      "summary": "[SECURITY] {issue_summary}",
+      "severity": "critical",
+      "source": "shield-security",
+      "custom_details": {
+        "agent": "Shield",
+        "type": "{security_issue_type}",
+        "affected": "{resources}",
+        "cvss": "{cvss_score}"
+      }
+    },
+    "client": "cluster-agent-swarm"
+  }'
+```
+
+### Escalation Flow (Security = Always Faster)
+
+1. Security issues → Immediately send Slack/Teams with CRITICAL priority
+2. Wait 3 minutes for CRITICAL, 10 minutes for HIGH
+3. No response → Trigger PagerDuty immediately
+4. Security incidents ALWAYS escalate to PagerDuty
+
+### Response Timeouts
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 3 minutes | 5 minutes total |
+| HIGH | 10 minutes | 20 minutes total |
+| MEDIUM | 20 minutes | No escalation |
+
+---
+
 ## Helper Scripts
 
 | Script | Purpose |

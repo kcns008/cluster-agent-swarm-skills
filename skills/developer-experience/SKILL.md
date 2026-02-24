@@ -910,4 +910,132 @@ aws s3api put-bucket-versioning \
 
 ---
 
+## 12. HUMAN COMMUNICATION & ESCALATION
+
+> Keep humans in the loop. Use Slack/Teams for async communication. Use PagerDuty for urgent escalation.
+
+### Communication Channels
+
+| Channel | Use For | Response Time |
+|---------|---------|---------------|
+| Slack | Namespace requests, onboarding | < 1 hour |
+| MS Teams | Namespace requests, onboarding | < 1 hour |
+| PagerDuty | Production namespace issues | Immediate |
+
+### Slack/MS Teams Message Templates
+
+#### Approval Request (Namespace/Resource)
+
+```json
+{
+  "text": "🎯 *Agent Action Required - DevEx*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Approval Request from Desk (Developer Experience)*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Type:*\n{request_type}"},
+        {"type": "mrkdwn", "text": "*Target:*\n{namespace/team}"},
+        {"type": "mrkdwn", "text": "*Risk:*\n{risk_level}"},
+        {"type": "mrkdwn", "text": "*Deadline:*\n{response_deadline}"}
+      ]
+    },
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Request Details:*\n```{request_details}```"
+      }
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "✅ Approve"},
+          "style": "primary",
+          "action_id": "approve_{request_id}"
+        },
+        {
+          "type": "button",
+          "text": {"type": "plain_text", "text": "❌ Reject"},
+          "style": "danger",
+          "action_id": "reject_{request_id}"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Onboarding Complete
+
+```json
+{
+  "text": "✅ *Desk - Onboarding Complete*",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Team {team_name} has been onboarded*"
+      }
+    },
+    {
+      "type": "section",
+      "fields": [
+        {"type": "mrkdwn", "text": "*Namespace:*\n{namespace}"},
+        {"type": "mrkdwn", "text": "*Resources Created:*\n{resources}"}
+      ]
+    }
+  ]
+}
+```
+
+### PagerDuty Integration
+
+```bash
+curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "routing_key": "$PAGERDUTY_ROUTING_KEY",
+    "event_action": "trigger",
+    "payload": {
+      "summary": "[Desk] {issue_summary}",
+      "severity": "{critical|error|warning}",
+      "source": "desk-developer-experience",
+      "custom_details": {
+        "agent": "Desk",
+        "namespace": "{namespace}",
+        "issue": "{issue_details}"
+      }
+    },
+    "client": "cluster-agent-swarm"
+  }'
+```
+
+### Escalation Flow
+
+1. Namespace/resource request → Send Slack/Teams approval request
+2. Wait 15 minutes for response
+3. No response → Send reminder
+4. Still no response → Trigger PagerDuty for HIGH priority
+5. Execute or log rejection
+
+### Response Timeouts
+
+| Priority | Slack/Teams Wait | PagerDuty Escalation After |
+|----------|------------------|---------------------------|
+| CRITICAL | 5 minutes | 10 minutes total |
+| HIGH | 15 minutes | 30 minutes total |
+| MEDIUM | 30 minutes | No escalation |
+
+---
+
 ## Helper Scripts
