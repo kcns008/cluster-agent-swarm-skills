@@ -49,15 +49,24 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills
 This installs all 7 agents as a single combined skill with access to all capabilities.
 
 ### Install Individual Skills
-Each agent can also be installed separately:
+Each agent can also be installed separately using GitHub tree path or --skill flag:
+
 ```bash
-# Orchestrator - Task routing and coordination
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/orchestrator
+# Using GitHub tree path (recommended)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
 
-# Cluster Ops - Atlas (cluster operations)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/cluster-ops
+# Using --skill flag (if supported by your skills tool)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill orchestrator
 
-# GitOps - Flow (ArgoCD, Helm, Kustomize)
+# Available individual skills:
+# - orchestrator  (Jarvis - task routing)
+# - cluster-ops   (Atlas - cluster operations)
+# - gitops        (Flow - ArgoCD, Helm, Kustomize)
+# - security      (Shield - RBAC, policies)
+# - observability (Pulse - metrics, alerts)
+# - artifacts     (Cache - registries, SBOM)
+# - developer-experience (Desk - namespaces, onboarding)
+```
 npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/gitops
 
 # Security - Shield (RBAC, policies, CVEs)
