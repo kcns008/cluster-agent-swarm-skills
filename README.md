@@ -45,26 +45,26 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills
 
 **Install individual agent skills:**
 ```bash
-# Orchestrator (coordination layer)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill orchestrator
+# Using tree path (recommended)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
 
 # Cluster Operations (Atlas)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill cluster-ops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/cluster-ops
 
 # GitOps & Deployments (Flow)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill gitops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/gitops
 
 # Security & Compliance (Shield)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill security
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/security
 
 # Observability & Incident Response (Pulse)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill observability
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/observability
 
 # Artifact & Supply Chain (Cache)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill artifacts
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/artifacts
 
 # Developer Experience (Desk)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill developer-experience
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/developer-experience
 ```
 
 ---
@@ -274,13 +274,13 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills
 ### Option 2: Individual Agent Skills
 
 ```bash
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill cluster-ops
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill gitops
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill security
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill observability
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill artifacts
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill developer-experience
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill orchestrator
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/cluster-ops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/gitops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/security
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/observability
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/artifacts
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/developer-experience
 ```
 
 ### Option 3: Manual
