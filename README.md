@@ -86,6 +86,16 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/s
 - Daily standup generation
 - Workflow orchestration (deployment pipelines, incident response)
 - Cross-agent communication management
+- Environment awareness (dev/qa/staging/prod)
+- Continuous learning (skill improvement PRs)
+
+**Helper scripts included:**
+- `daily-standup.sh` — Generate daily standup report
+- `route-task.sh` — Route a task to the appropriate agent
+- `check-sla.sh` — Check for SLA breaches
+- `skill-improvement-pr.sh` — Scan logs for SKILL_IMPROVEMENT and create PRs
+- `setup-session.sh` — Set up environment context (dev/qa/staging/prod)
+- `gather-cluster-info.sh` — Gather cluster version and component info
 
 ---
 
@@ -382,9 +392,12 @@ This repository includes a complete **agent memory and audit system** for swarm 
 | `QUICKREF.md` | One-page reference for agent operating rules |
 | `memory/MEMORY.md` | Persistent long-term learning |
 | `logs/LOGS.md` | Action audit trail for all agents |
+| `logs/SKILL_IMPROVEMENTS.md` | Pending skill improvements from agents |
 | `incidents/INCIDENTS.md` | Production incident tracking |
 | `troubleshooting/TROUBLESHOOTING.md` | Debug knowledge base |
 | `agents/AGENTS.md` | Per-agent status and action logging |
+| `working/SESSION.md` | Current session environment context |
+| `working/WORKING.md` | Per-agent progress tracking |
 
 ### Agent Operating Rules
 
@@ -424,6 +437,131 @@ Every agent action MUST be logged to:
 - `incidents/INCIDENTS.md` — If failure/issue occurs
 - `troubleshooting/TROUBLESHOOTING.md` — If new problem solved
 - `memory/MEMORY.md` — If important learning
+
+---
+
+## Continuous Learning — Skill Improvements
+
+The swarm learns from every interaction. When agents identify improvements during troubleshooting or cluster activities, they create PRs for human review.
+
+### How It Works
+
+1. **Agent identifies improvement** → Logs to `logs/LOGS.md` with `Category: SKILL_IMPROVEMENT`
+2. **Orchestrator detects** → Scans logs on heartbeat
+3. **PR created** → Human reviews the improvement
+4. **Merged** → Skill updated for future agents
+
+### Log Template
+
+```markdown
+### Agent: <agent-name>
+### Category: SKILL_IMPROVEMENT
+### Skill: <skill-name>/<script-or-file>
+### Improvement Type: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE
+### Suggested Fix: <description>
+```
+
+### Improvement Types
+
+| Type | Description |
+|------|-------------|
+| `SCRIPT_FIX` | Bug in existing script needs fixing |
+| `NEW_CAPABILITY` | Script needs new feature/functionality |
+| `REFERENCE_DOC` | Documentation needs updating |
+| `WORKFLOW_CHANGE` | Agent workflow needs adjustment |
+
+### Helper Script
+
+```bash
+# Scan for improvements (check-only)
+bash skills/orchestrator/scripts/skill-improvement-pr.sh --check-only
+
+# Scan and create PRs
+bash skills/orchestrator/scripts/skill-improvement-pr.sh
+```
+
+---
+
+## Environment Awareness
+
+Every agent must know what environment they're working in and what changes are allowed.
+
+### Environment Types
+
+| Environment | Code | Description |
+|------------|------|-------------|
+| Development | `dev` | Sandbox, testing, feature development |
+| QA | `qa` | Quality assurance testing |
+| Staging | `staging` | Pre-production mirror |
+| Production | `prod` | Live customer-facing systems |
+
+### Change Permissions by Environment
+
+| Action | dev | qa | staging | prod |
+|--------|-----|-----|---------|------|
+| **Delete Resources** | Approval | Approval | Approval | **NEVER** |
+| **Modify Prod Workloads** | Approval | Approval | Approval | **NEVER** |
+| **Create/Modify RBAC** | Approval | Approval | Approval | **NEVER** |
+| **Scale Workloads** | Auto | Approval | Approval | **NEVER** |
+| **Modify Secrets** | Approval | Approval | Approval | **NEVER** |
+| **Deploy Images** | Auto | Approval | Approval | Approval Required |
+| **View/Read** | Auto | Auto | Auto | Auto |
+
+### Session Context (SESSION.md)
+
+At session start, agents read `working/SESSION.md` to know:
+- **Environment**: dev | qa | staging | prod
+- **Cluster Type**: OpenShift, EKS, GKE, AKS, etc.
+- **Permission Level**: What changes can be made
+
+### Setup New Session
+
+```bash
+# Set up environment context
+bash skills/orchestrator/scripts/setup-session.sh <environment> [context-name]
+
+# Examples:
+bash skills/orchestrator/scripts/setup-session.sh prod my-prod-cluster
+bash skills/orchestrator/scripts/setup-session.sh dev
+bash skills/orchestrator/scripts/setup-session.sh qa qa-eks-cluster
+```
+
+### Gather Cluster Information
+
+When first connecting to a cluster:
+
+```bash
+# Gather cluster version and component info
+bash skills/orchestrator/scripts/gather-cluster-info.sh
+
+# Output JSON for automation
+bash skills/orchestrator/scripts/gather-cluster-info.sh --json
+```
+
+This populates `working/SESSION.md` with:
+- Platform type (OpenShift, EKS, GKE, AKS, etc.)
+- Cluster version
+- Kubernetes version
+- Component versions (ArgoCD, Prometheus, etc.)
+
+### Session Start Protocol
+
+Every session MUST begin with:
+
+```bash
+# 1. Get bearings
+pwd
+ls -la
+
+# 2. Read environment context (CRITICAL)
+cat working/SESSION.md
+
+# 3. Read progress file
+cat working/WORKING.md
+
+# 4. Read recent logs
+cat logs/LOGS.md | head -100
+```
 
 ---
 
