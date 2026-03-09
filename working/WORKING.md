@@ -4,6 +4,43 @@
 
 ---
 
+## Session Start Protocol
+
+Before starting ANY work, agents MUST:
+
+1. **Read SESSION.md** - Check environment context (dev/qa/staging/prod)
+2. **Read this file** - Check current progress
+3. **Check cluster access** - Verify can connect to cluster
+
+```bash
+# Required at session start
+cat working/SESSION.md    # Environment context
+cat working/WORKING.md    # Your progress
+cat logs/LOGS.md | head -50  # Recent activity
+```
+
+---
+
+## Environment Context (from SESSION.md)
+
+| Key | Value |
+|-----|-------|
+| Environment | |
+| Cluster Type | |
+| Cluster Name | |
+| Permission Level | |
+
+### Environment Constraints
+
+| Environment | Can Delete | Can Modify Prod | Can RBAC | Can Scale | Can Secrets |
+|-------------|------------|-----------------|----------|-----------|--------------|
+| **dev** | Approval | Approval | Approval | Auto | Approval |
+| **qa** | Approval | Approval | Approval | Approval | Approval |
+| **staging** | Approval | Approval | Approval | Approval | Approval |
+| **prod** | NEVER | NEVER | NEVER | NEVER | NEVER |
+
+---
+
 ## Agent Progress Templates
 
 Copy the appropriate template for your agent at session start. Update before ending session.
@@ -15,6 +52,8 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
+- Environment: 
 
 ### Completed This Session
 - 
@@ -35,6 +74,8 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
+- Environment: 
 
 ### Completed This Session
 - 
@@ -55,6 +96,7 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
 
 ### Completed This Session
 - 
@@ -75,6 +117,7 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
 
 ### Completed This Session
 - 
@@ -95,6 +138,7 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
 
 ### Completed This Session
 - 
@@ -115,6 +159,7 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
 
 ### Completed This Session
 - 
@@ -135,6 +180,7 @@ Copy the appropriate template for your agent at session start. Update before end
 ### Current Session
 - Started: 
 - Task: 
+- Environment: 
 
 ### Completed This Session
 - 
