@@ -66,6 +66,7 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill orc
 # - observability (Pulse - metrics, alerts)
 # - artifacts     (Cache - registries, SBOM)
 # - developer-experience (Desk - namespaces, onboarding)
+# - qmd           (Local hybrid search for markdown notes/docs)
 ```
 npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/gitops
 
@@ -80,6 +81,9 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/arti
 
 # Developer Experience - Desk (namespaces, onboarding)
 npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/developer-experience
+
+# QMD - Local Markdown Search (notes, docs, knowledge bases)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/qmd
 ```
 
 ---
@@ -263,6 +267,8 @@ cluster-agent-swarm-skills/
 │   │   └── SKILL.md
 │   └── developer-experience/   # Desk - DevEx
 │       └── SKILL.md
+│   └── qmd/                    # Local markdown search
+│       └── SKILL.md
 ├── scripts/                    # Shared scripts
 └── references/                 # Shared documentation
 ```
@@ -279,3 +285,4 @@ For detailed capabilities of each agent, refer to individual SKILL.md files:
 - `skills/observability/SKILL.md` - Full Observability documentation
 - `skills/artifacts/SKILL.md` - Full Artifacts documentation
 - `skills/developer-experience/SKILL.md` - Full Developer Experience documentation
+- `skills/qmd/SKILL.md` - QMD local markdown search documentation
