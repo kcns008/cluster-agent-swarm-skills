@@ -36,6 +36,7 @@
 |----------|-------------|
 | `CLUSTER_ACTION` | Any kubectl/oc command execution |
 | `SKILL_EXECUTION` | Running a skill script |
+| `SKILL_IMPROVEMENT` | Identified need to update/improve a skill or script |
 | `DECISION` | Agent makes a decision |
 | `APPROVAL_NEEDED` | Requires human approval |
 | `ESCALATION` | Escalating to human or another agent |
@@ -54,6 +55,31 @@
 - **Target**: What was affected (file, resource, cluster)
 - **Result**: SUCCESS | FAILURE | PARTIAL | BLOCKED | PENDING_APPROVAL
 - **Next Action**: What happens next
+- **Skill Improvement** (optional): If SKILL_IMPROVEMENT category, add:
+  - `Skill`: Which skill/script needs improvement
+  - `Improvement Type`: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE
+  - `Suggested Fix`: Brief description of what should change
+
+---
+
+## SKILL_IMPROVEMENT Log Template
+
+When an agent identifies a skill needs improvement during troubleshooting or cluster activities:
+
+```
+## [TIMESTAMP UTC]
+
+### Agent: <agent-name>
+### Action: <what was done>
+### Reason: <why>
+### Target: <file/system/resource>
+### Result: SUCCESS | FAILURE | PARTIAL | BLOCKED | PENDING_APPROVAL
+### Category: SKILL_IMPROVEMENT
+### Skill: <skill-name>/<script-or-file>
+### Improvement Type: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE
+### Suggested Fix: <description of improvement>
+### Next Action: <planned next step>
+```
 
 ---
 

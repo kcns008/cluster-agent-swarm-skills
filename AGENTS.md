@@ -268,6 +268,24 @@ When requesting approval, agents MUST provide:
 ### Next Action: <planned next step>
 ```
 
+### Continuous Learning — Skill Improvements
+
+When an agent identifies a skill (script, documentation, workflow) needs improvement during troubleshooting or cluster activities:
+
+1. **Agent logs SKILL_IMPROVEMENT** in `logs/LOGS.md` with:
+   - `Category: SKILL_IMPROVEMENT`
+   - `Skill: <skill-name>/<script-or-file>`
+   - `Improvement Type: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE`
+   - `Suggested Fix: <description>`
+
+2. **Orchestrator detects** SKILL_IMPROVEMENT entries on heartbeat
+
+3. **Orchestrator creates PR** for human review via `skill-improvement-pr.sh`
+
+4. **Human reviews** → Approve, reject, or request changes
+
+This ensures the swarm continuously learns and improves from every interaction.
+
 ---
 
 ## CONTEXT WINDOW MANAGEMENT

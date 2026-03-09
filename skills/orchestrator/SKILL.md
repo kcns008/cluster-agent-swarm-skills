@@ -279,6 +279,81 @@ Every 15 minutes:
 
 ---
 
+## 5A. CONTINUOUS LEARNING — Skill Improvement Workflow
+
+> When agents identify skill improvements during troubleshooting or cluster activities, the orchestrator MUST create PRs for human review.
+
+### Why This Matters
+
+Agents learn from every interaction. When an agent fixes a problem and notices a skill (script, documentation, workflow) could be improved, that learning should be captured and reviewed by humans.
+
+### Workflow
+
+```
+Step 1: Agent identifies improvement
+        → Logs to logs/LOGS.md with Category: SKILL_IMPROVEMENT
+        
+Step 2: Orchestrator heartbeat detects SKILL_IMPROVEMENT entries
+        → Runs skill-improvement-pr.sh script
+        
+Step 3: Script creates branch with improvement notes
+        → Adds entry to logs/SKILL_IMPROVEMENTS.md
+        
+Step 4: Script opens PR for human review
+        → Human reviews, approves, merges, or rejects
+        
+Step 5: Improvement merged → Skill updated → Future agents benefit
+```
+
+### Agent: Log SKILL_IMPROVEMENT
+
+When any agent identifies a skill needs improvement during troubleshooting:
+
+```markdown
+## [TIMESTAMP UTC]
+
+### Agent: <agent-name>
+### Action: <what was done>
+### Reason: <why>
+### Target: <file/system/resource>
+### Result: SUCCESS | FAILURE | PARTIAL | BLOCKED | PENDING_APPROVAL
+### Category: SKILL_IMPROVEMENT
+### Skill: <skill-name>/<script-or-file>
+### Improvement Type: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE
+### Suggested Fix: <description of improvement>
+### Next Action: <orchestrator will create PR>
+```
+
+### Improvement Types
+
+| Type | Description |
+|------|-------------|
+| `SCRIPT_FIX` | Bug in existing script needs fixing |
+| `NEW_CAPABILITY` | Script needs new feature/functionality |
+| `REFERENCE_DOC` | Documentation needs updating |
+| `WORKFLOW_CHANGE` | Agent workflow needs adjustment |
+
+### Orchestrator: Run Skill Improvement Scanner
+
+Every heartbeat, run the skill improvement scanner:
+
+```bash
+# Check for new improvements (no PR creation)
+bash scripts/skill-improvement-pr.sh --check-only
+
+# Scan and create PRs
+bash scripts/skill-improvement-pr.sh
+```
+
+### Human Review Process
+
+1. **PR received** → Human reviews the improvement suggestion
+2. **Approved** → Merge PR, skill is now improved
+3. **Rejected** → Close PR with reason, note in SKILL_IMPROVEMENTS.md
+4. **Needs Work** → Comment, assign back to agent for refinement
+
+---
+
 ## 6. CROSS-AGENT COMMUNICATION TEMPLATES
 
 ### Task Assignment
@@ -653,6 +728,7 @@ All human communication MUST include:
 | `daily-standup.sh` | Generate daily standup report |
 | `route-task.sh` | Route a task to the appropriate agent |
 | `check-sla.sh` | Check for SLA breaches |
+| `skill-improvement-pr.sh` | Scan logs for SKILL_IMPROVEMENT and create PRs |
 
 Run any script:
 ```bash
