@@ -107,7 +107,7 @@ create_pr() {
 Agent ($agent) identified an opportunity to improve skill during troubleshooting/cluster activities.
 
 ### Skill: $skill
-### Improvement Type: $improvement_TYPE
+### Improvement Type: $improvement_type
 ### Suggested By: $agent
 
 ### Description

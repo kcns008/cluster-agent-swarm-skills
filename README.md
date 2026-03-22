@@ -38,6 +38,16 @@ Skills follow the [Agent Skills](https://agentskills.io/) format.
 
 ## Quick Start
 
+**⚠️ Security Note: For production use, pin to a specific commit or tag rather than using main branch:**
+```bash
+# Clone and verify before using
+git clone https://github.com/kcns008/cluster-agent-swarm-skills.git
+cd cluster-agent-swarm-skills
+git fetch --tags
+git checkout v1.0.0  # Replace with your verified version
+# Then review SKILL.md for installation
+```
+
 **Install the complete swarm (all agent skills):**
 ```bash
 npx skills add https://github.com/kcns008/cluster-agent-swarm-skills

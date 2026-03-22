@@ -126,6 +126,14 @@ bash skills/orchestrator/scripts/setup-session.sh <environment> [context-name]
 - **Always verify the source**: Confirm `https://github.com/kcns008/cluster-agent-swarm-skills` is the intended repository
 - Prefer installing from a **pinned commit hash** or verified release tag
 - Review commit history and authors before installing
+- Example of pinning to a specific version:
+  ```bash
+  # Clone and checkout specific tag/commit before using
+  git clone https://github.com/kcns008/cluster-agent-swarm-skills.git
+  cd cluster-agent-swarm-skills
+  git fetch --tags
+  git checkout v1.0.0  # or specific commit hash
+  ```
 
 ### Install Mechanism Warning
 - This is a **scripted skill** (not instruction-only) - it will write executable code to disk
@@ -203,23 +211,24 @@ npx skills add https://github.com/kcns008/cluster-agent-swarm-skills --skill orc
 # - artifacts     (Cache - registries, SBOM)
 # - developer-experience (Desk - namespaces, onboarding)
 # - qmd           (Local hybrid search for markdown notes/docs)
-```
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/gitops
+
+# GitOps - Flow (ArgoCD, Helm, Kustomize)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/gitops
 
 # Security - Shield (RBAC, policies, CVEs)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/security
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/security
 
 # Observability - Pulse (metrics, alerts, incidents)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/observability
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/observability
 
 # Artifacts - Cache (registries, SBOM, promotions)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/artifacts
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/artifacts
 
 # Developer Experience - Desk (namespaces, onboarding)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/developer-experience
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/developer-experience
 
 # QMD - Local Markdown Search (notes, docs, knowledge bases)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/skills/qmd
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/qmd
 ```
 
 ---
