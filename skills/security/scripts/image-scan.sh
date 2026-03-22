@@ -135,10 +135,13 @@ elif command -v grype &> /dev/null; then
     esac
     
 else
-    echo "ERROR: Neither Trivy nor Grype found." >&2
-    echo "Install Trivy: https://aquasecurity.github.io/trivy/latest/getting-started/installation/" >&2
-    echo "Install Grype: https://github.com/anchore/grype#installation" >&2
-    exit 2
+  echo "ERROR: Neither Trivy nor Grype found." >&2
+  echo "" >&2
+  echo "Install via your package manager:" >&2
+  echo "  macOS: brew install trivy  # or: brew install grype" >&2
+  echo "  Ubuntu/Debian: See https://github.com/aquasecurity/trivy/releases" >&2
+  echo "  See SECURITY.md for verification requirements" >&2
+  exit 2
 fi
 
 # Parse results

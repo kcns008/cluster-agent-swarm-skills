@@ -6,7 +6,7 @@ description: >
   Security (Shield), Observability (Pulse), Artifacts (Cache), and Developer Experience (Desk).
 metadata:
   author: cluster-agent-swarm
-  version: 1.0.0
+  version: 1.0.1
   agent_name: Swarm
   agent_role: Platform Agent Swarm (All Agents)
   session_key: "agent:platform:swarm"
@@ -384,8 +384,7 @@ cluster-agent-swarm-skills/
 │   │   └── SKILL.md
 │   └── developer-experience/   # Desk - DevEx
 │       └── SKILL.md
-│   └── qmd/                    # Local markdown search
-│       └── SKILL.md
+
 ├── scripts/                    # Shared scripts
 └── references/                 # Shared documentation
 ```
@@ -402,4 +401,3 @@ For detailed capabilities of each agent, refer to individual SKILL.md files:
 - `skills/observability/SKILL.md` - Full Observability documentation
 - `skills/artifacts/SKILL.md` - Full Artifacts documentation
 - `skills/developer-experience/SKILL.md` - Full Developer Experience documentation
-- `skills/qmd/SKILL.md` - QMD local markdown search documentation

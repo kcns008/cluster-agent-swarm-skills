@@ -49,8 +49,13 @@ echo "" >&2
 mkdir -p "$OUTPUT_DIR"
 
 if ! command -v syft &> /dev/null; then
-    echo "Install: curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin" >&2
-    blocked_error "syft not found."
+  echo "ERROR: syft not found" >&2
+  echo "" >&2
+  echo "Install syft via your package manager:" >&2
+  echo "  macOS: brew install syft" >&2
+  echo "  Ubuntu/Debian: Download from https://github.com/anchore/syft/releases" >&2
+  echo "  See SECURITY.md for verification requirements" >&2
+  blocked_error "syft not found."
 fi
 
 OUTPUT_FILE="${OUTPUT_DIR}/sbom-${SAFE_NAME}.json"

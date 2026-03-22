@@ -164,9 +164,13 @@ ONBOARDING_DOC=$(cat << ONBOARD_DOC
 # macOS
 brew install kubectl  # or: brew install openshift-cli
 
-# Linux
-curl -LO "https://dl.k8s.io/release/\$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install -y kubectl
+
+# RHEL/CentOS/Fedora
+sudo yum install kubectl  # or: sudo dnf install kubectl
+
+# For other platforms, see: https://kubernetes.io/docs/tasks/tools/
 \`\`\`
 
 ### 2. Configure Cluster Access
