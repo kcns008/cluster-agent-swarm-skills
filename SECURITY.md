@@ -38,6 +38,7 @@ The following patterns are **PROHIBITED** in this codebase:
 2. **Unverified downloads**: Downloading binaries without checksum verification
 3. **Remote script execution**: Executing scripts directly from URLs
 4. **main branch dependencies**: Pin to specific releases, not floating branches
+5. **Floating npx skills add URLs**: `npx skills add https://github.com/.../tree/main` MUST use commit hashes in production
 
 ### Allowed Patterns
 
@@ -95,6 +96,87 @@ bash shared/lib/verify-binary.sh ./trivy-linux-amd64 \
   "a1b2c3d4e5f6..."
 ```
 
+## Supply Chain Security for npx skills add
+
+### Threat Model
+
+The `npx skills add <github-url>` command downloads and executes code from GitHub URLs. This is a **supply chain risk** because:
+
+1. **Remote Code Execution**: Code is fetched and executed without local review
+2. **No Integrity Verification**: No checksum or signature verification by default
+3. **Floating URLs**: Using `tree/main` or branch names can pull unexpected changes
+4. **Third-Party Dependency**: GitHub URLs point to external repositories
+
+### Required Practices
+
+For ALL production installations using `npx skills add`:
+
+1. **ALWAYS PIN TO VERIFIED COMMIT HASH** - Never use floating URLs like `tree/main` or branch names
+2. **VERIFY THE COMMIT** - Review the commit before installing
+3. **USE GPG VERIFICATION** - If available, verify commit signatures
+4. **USE MANUAL CLONE FOR HIGHEST SECURITY** - Gives full audit control
+
+### Approved Installation Patterns
+
+#### ❌ PROHIBITED (Floating URLs)
+
+```bash
+# NEVER use these in production
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
+```
+
+#### ✅ ALLOWED (Pinned Commit)
+
+```bash
+# Acceptable for production with verified commit
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e
+
+# With commit verification first
+git clone https://github.com/kcns008/cluster-agent-swarm-skills
+cd cluster-agent-swarm-skills
+git checkout 91c362dba2911f7523f179e7dcc374cf4335814e
+git verify-commit 91c362dba2911f7523f179e7dcc374cf4335814e  # if GPG signed
+# Then install using the pinned URL
+```
+
+#### ✅ MOST SECURE (Manual Clone)
+
+```bash
+# Highest security - full audit before any execution
+git clone https://github.com/kcns008/cluster-agent-swarm-skills
+cd cluster-agent-swarm-skills
+git checkout 91c362dba2911f7523f179e7dcc374cf4335814e
+
+# Review all scripts BEFORE copying
+ls skills/*/scripts/
+cat skills/*/scripts/*.sh | less
+
+# Copy manually reviewed scripts
+cp -r skills/orchestrator ~/.claude/skills/
+```
+
+### Verification Checklist
+
+Before installing in production:
+
+- [ ] URL uses a full commit hash (40 characters), not a branch or tag name
+- [ ] Commit hash has been reviewed: `git show <commit-hash>`
+- [ ] Scripts in `skills/*/scripts/` have been audited
+- [ ] GPG signature verified (if available): `git verify-commit <commit-hash>`
+- [ ] Changes since last verified version reviewed
+- [ ] Tested in non-production environment
+
+### Repository Pinning
+
+When maintaining multiple skills from this repository:
+
+1. **Track the pinned commit** in your deployment documentation
+2. **Update systematically** - review all commits since last pin before updating
+3. **Document the change** - maintain a change log with commit hashes
+4. **Maintain offline copies** - keep verified versions for air-gapped environments
+
 ## Prompt Injection Mitigations
 
 ### Threat Model
@@ -150,6 +232,8 @@ Before submitting changes:
 - [ ] No execution of untrusted input
 - [ ] RBAC permissions follow least privilege
 - [ ] All JSON outputs from untrusted data use `sanitize_json_output()`
+- [ ] All `npx skills add` URLs use pinned commit hashes, not floating branches
+- [ ] Documentation includes commit pinning instructions for production use
 
 ## Reporting Security Issues
 
@@ -166,6 +250,7 @@ This section tracks security-related updates:
 
 | Date | Update | Version |
 |------|--------|---------|
+| 2026-03-29 | Added supply chain guidance for npx skills add, commit pinning requirements | 1.0.3 |
 | 2026-03-29 | Added prompt injection mitigations (sanitization, truncation) | 1.0.2 |
 | 2026-03-22 | Removed qmd skill (external download risk) | 1.0.1 |
 | 2026-03-22 | Added SECURITY.md | 1.0.1 |

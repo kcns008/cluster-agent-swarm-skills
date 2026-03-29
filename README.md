@@ -49,32 +49,40 @@ git checkout v1.0.0  # Replace with your verified version
 ```
 
 **Install the complete swarm (all agent skills):**
+
+> ⚠️ **SECURITY WARNING**: `npx skills add` downloads and executes code from GitHub. Always pin to a verified commit hash for production use.
+
 ```bash
+# Development (uses latest main - NOT recommended for production)
 npx skills add https://github.com/kcns008/cluster-agent-swarm-skills
+
+# Production (pin to verified commit)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e
 ```
 
+**Verification steps before production use:**
+1. Review the commit: `git show 91c362dba2911f7523f179e7dcc374cf4335814e`
+2. Verify the GPG signature if available
+3. Audit the scripts in `skills/*/scripts/` directories
+4. Test in non-production environment
+
 **Install individual agent skills:**
+
+> ⚠️ **SECURITY WARNING**: Always pin to a verified commit hash for production use. Do NOT use floating `main` or `tree/main` URLs.
+
 ```bash
-# Using tree path (recommended)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
+# Production (pin to verified commit - recommended)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/orchestrator
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/cluster-ops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/gitops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/security
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/observability
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/artifacts
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/developer-experience
 
-# Cluster Operations (Atlas)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/cluster-ops
-
-# GitOps & Deployments (Flow)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/gitops
-
-# Security & Compliance (Shield)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/security
-
-# Observability & Incident Response (Pulse)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/observability
-
-# Artifact & Supply Chain (Cache)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/artifacts
-
-# Developer Experience (Desk)
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/developer-experience
+# Development only - NOT for production
+# npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
+# ... (other skills)
 ```
 
 ---
@@ -287,28 +295,52 @@ All agents include Slack/MS Teams Block Kit templates for approval requests, sta
 
 ### Option 1: Full Swarm (Recommended)
 
+> ⚠️ **SECURITY WARNING**: Always pin to a verified commit hash for production use.
+
 ```bash
+# Development (uses latest main - NOT for production)
 npx skills add https://github.com/kcns008/cluster-agent-swarm-skills
+
+# Production (pin to verified commit - recommended)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e
 ```
 
 ### Option 2: Individual Agent Skills
 
 ```bash
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/orchestrator
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/cluster-ops
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/gitops
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/security
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/observability
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/artifacts
-npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/main/skills/developer-experience
+# Production (pin to verified commit - recommended)
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/orchestrator
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/cluster-ops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/gitops
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/security
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/observability
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/artifacts
+npx skills add https://github.com/kcns008/cluster-agent-swarm-skills/tree/91c362dba2911f7523f179e7dcc374cf4335814e/skills/developer-experience
 ```
 
-### Option 3: Manual
+### Option 3: Manual Clone (Most Secure)
+
+> ✅ **RECOMMENDED FOR PRODUCTION**: This method gives you full control and auditability.
 
 ```bash
+# Clone and checkout verified commit
 git clone https://github.com/kcns008/cluster-agent-swarm-skills
+cd cluster-agent-swarm-skills
+git checkout 91c362dba2911f7523f179e7dcc374cf4335814e
+git verify-commit 91c362dba2911f7523f179e7dcc374cf4335814e  # if GPG signed
+
+# Review scripts before copying
+# cat skills/*/scripts/*.sh | less
+
+# Copy to skills directory
 cp -r skills/<agent-name> ~/.claude/skills/
 ```
+
+**Advantages of manual installation:**
+- Full audit of code before installation
+- No automatic code execution from remote URLs
+- Git history verification available
+- Can maintain offline copies of verified versions
 
 ---
 
