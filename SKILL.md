@@ -162,6 +162,10 @@ bash skills/orchestrator/scripts/setup-session.sh <environment> [context-name]
 - **Only allow downloads from trusted release sources** (official GitHub releases, package managers)
 - Consider curating offline toolchains if your environment requires it
 
+### Additional Documentation
+- **[OPERATIONAL_RISKS.md](OPERATIONAL_RISKS.md)** - Complete documentation of operational risks, inconsistencies, and mitigations
+- **[SECURITY.md](SECURITY.md)** - Security policy, external dependencies, and verification requirements
+
 ---
 
 This is the complete cluster-agent-swarm skill package. When you add this skill, you get 

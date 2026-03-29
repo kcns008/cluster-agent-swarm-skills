@@ -1,5 +1,10 @@
 # AGENTS.md — Cluster Agent Swarm Skills
 
+## Related Documentation
+
+- **[OPERATIONAL_RISKS.md](OPERATIONAL_RISKS.md)** - Operational risks, inconsistencies, and incident response procedures
+- **[SECURITY.md](SECURITY.md)** - Security policy, external dependencies, and verification requirements
+
 ## Repository Purpose
 
 This repository contains skills for an AI agent swarm designed to manage Kubernetes and OpenShift platform operations. Each skill directory under `skills/` represents one specialized agent in the swarm.

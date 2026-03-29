@@ -1,5 +1,10 @@
 # Security Policy
 
+## Related Documentation
+
+- **[OPERATIONAL_RISKS.md](OPERATIONAL_RISKS.md)** - Operational risks, inconsistencies, and incident response procedures
+- **[AGENTS.md](AGENTS.md)** - Agent configuration, protocols, and communication patterns
+
 ## Overview
 
 This repository contains Kubernetes and OpenShift platform operations tools. Security is our top priority. This document outlines security practices, external dependencies, and verification requirements.

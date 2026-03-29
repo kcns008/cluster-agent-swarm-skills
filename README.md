@@ -291,6 +291,18 @@ All agents include Slack/MS Teams Block Kit templates for approval requests, sta
 
 ---
 
+## Operational Risks
+
+Before installing, review [OPERATIONAL_RISKS.md](OPERATIONAL_RISKS.md) for:
+
+- Documented inconsistencies in SKILL.md files
+- Operational risks and their mitigations
+- Incident response procedures
+
+> ⚠️ **IMPORTANT**: Individual skill SKILL.md files do NOT include the complete security assessment. Always reference the main SKILL.md and OPERATIONAL_RISKS.md.
+
+---
+
 ## Installation Options
 
 ### Option 1: Full Swarm (Recommended)
