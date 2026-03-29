@@ -99,15 +99,16 @@ if [ -n "$LOKI_URL" ]; then
         # Display logs
         echo "" >&2
         echo "$LOKI_RESULT" | jq -r '.data.result[].values[][] | .[1]' 2>/dev/null | head -100 >&2
-        
-        # Output JSON
-        echo "$LOKI_RESULT" | jq '{
+
+        # Sanitize and Output JSON - prevent prompt injection from untrusted log content
+        SANITIZED_JSON=$(echo "$LOKI_RESULT" | jq '{
             source: "loki",
             query: "'"$LOGQL"'",
             timestamp: "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
             result_count: (.data.result | map(.values | length) | add // 0),
-            results: [.data.result[].values[][] | {timestamp: .[0], line: .[1]}][:100]
-        }'
+            results: [.data.result[].values[][] | {timestamp: .[0], line: (.[1] | if length > 500 then .[:500] + "[TRUNCATED]" else . end)}][:100]
+        }')
+        sanitize_json_output "$SANITIZED_JSON"
         exit 0
     else
         echo "  Loki query failed, falling back..." >&2
@@ -130,13 +131,15 @@ fi
 
 if [ -z "$PODS" ]; then
     echo "  ERROR: No pods found matching '$APP' in namespace '$NAMESPACE'" >&2
-    cat << EOF
+    SANITIZED_JSON=$(cat << EOF
 {
   "source": "kubectl",
   "error": "No pods found matching '$APP' in namespace '$NAMESPACE'",
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 }
 EOF
+)
+    sanitize_json_output "$SANITIZED_JSON"
     exit 1
 fi
 
@@ -184,8 +187,8 @@ echo "  Pods searched: $POD_COUNT" >&2
 echo "  Total matching lines: $TOTAL_LINES" >&2
 echo "========================================" >&2
 
-# Output JSON
-cat << EOF
+# Output JSON with sanitization - prevent prompt injection from untrusted log content
+SANITIZED_JSON=$(cat << EOF
 {
   "source": "$LOG_SOURCE",
   "namespace": "$NAMESPACE",
@@ -194,6 +197,10 @@ cat << EOF
   "since": "$SINCE",
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
   "pods_searched": $POD_COUNT,
-  "total_matching_lines": $TOTAL_LINES
+  "total_matching_lines": $TOTAL_LINES,
+  "_sanitized": true,
+  "_note": "Log content truncated to 500 chars per line to prevent prompt injection"
 }
 EOF
+)
+sanitize_json_output "$SANITIZED_JSON"

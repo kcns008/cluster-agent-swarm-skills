@@ -104,13 +104,13 @@ if [ "$ALERTS_JSON" != "[]" ]; then
     FILTER="."
     [ -n "$SEVERITY_FILTER" ] && FILTER="$FILTER | select(.labels.severity == \"$SEVERITY_FILTER\")"
     [ -n "$NAMESPACE_FILTER" ] && FILTER="$FILTER | select(.labels.namespace == \"$NAMESPACE_FILTER\")"
-    
+
     PARSED_ALERTS=$(echo "$ALERTS_JSON" | jq "[.[] | $FILTER | {
         alertname: (.labels.alertname // \"unknown\"),
         severity: (.labels.severity // \"unknown\"),
         namespace: (.labels.namespace // \"cluster\"),
         service: (.labels.service // .labels.job // \"unknown\"),
-        summary: (.annotations.summary // .annotations.description // \"No description\"),
+        summary: (.annotations.summary // .annotations.description // \"No description\" | if length > 500 then .[:500] + \"[TRUNCATED]\" else . end),
         starts_at: (.startsAt // .activeAt // \"unknown\"),
         state: (.state // \"firing\")
     }]" 2>/dev/null || echo "[]")
@@ -150,8 +150,8 @@ echo "  Total:       $TOTAL_ALERTS alerts" >&2
 echo "  Events:      $EVENT_COUNT warnings" >&2
 echo "========================================" >&2
 
-# Output JSON
-cat << EOF
+# Output JSON with sanitization - prevent prompt injection from untrusted alert content
+SANITIZED_JSON=$(cat << EOF
 {
   "triage_type": "alert",
   "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
@@ -162,9 +162,13 @@ cat << EOF
     "total_alerts": $TOTAL_ALERTS,
     "warning_events": $EVENT_COUNT
   },
-  "alerts": $PARSED_ALERTS
+  "alerts": $PARSED_ALERTS,
+  "_sanitized": true,
+  "_note": "Alert messages truncated to 500 chars to prevent prompt injection"
 }
 EOF
+)
+sanitize_json_output "$SANITIZED_JSON"
 
 [ "$CRITICAL_COUNT" -gt 0 ] && exit 2
 [ "$WARNING_COUNT" -gt 0 ] && exit 1

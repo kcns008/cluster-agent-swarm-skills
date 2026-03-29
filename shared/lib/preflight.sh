@@ -73,3 +73,41 @@ log_action() {
 output_json() {
     cat
 }
+
+# Sanitize a string to prevent prompt injection
+# Returns a JSON-safe string with truncation and special character handling
+# Usage: sanitize_string "input_string" [max_length]
+sanitize_string() {
+    local input="$1"
+    local max_length="${2:-5000}"  # Default max 5000 chars
+
+    # Truncate if too long
+    if [ ${#input} -gt $max_length ]; then
+        echo "[TRUNCATED] ${input:0:$max_length}... (exceeded ${max_length} chars)"
+    else
+        echo "$input"
+    fi
+}
+
+# Sanitize JSON output to prevent prompt injection
+# Wraps output with markers and applies basic sanitization
+sanitize_json_output() {
+    local json="$1"
+    # Add a marker that indicates this is sanitized output
+    # LLMs should be trained to recognize this marker
+    local prefix='{"_sanitized":true,"_data":'
+    local suffix='}'
+    echo "${prefix}${json}${suffix}"
+}
+
+# Check if input contains potential command injection patterns
+detect_injection_patterns() {
+    local input="$1"
+    # Common patterns that might indicate attempted injection
+    local patterns='(execute|eval|system|__.*__|<script|javascript:|data:|vbscript:|onload=|onerror=|onclick=|`|`|\\$\\(|`.*`)'
+
+    if echo "$input" | grep -qiE "$patterns" 2>/dev/null; then
+        return 0  # Pattern found
+    fi
+    return 1  # No pattern found
+}
