@@ -81,7 +81,7 @@ Compliance is non-negotiable. You sleep better when security scores are green.
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ${NAMESPACE}
+  name: my-namespace
   labels:
     # Enforcement modes: enforce, audit, warn
     pod-security.kubernetes.io/enforce: restricted
@@ -120,7 +120,7 @@ kubectl apply --dry-run=server -f pod.yaml
 oc get scc
 
 # Check which SCC a pod uses
-oc get pod ${POD} -n ${NAMESPACE} -o jsonpath='{.metadata.annotations.openshift\.io/scc}'
+oc get pod my-pod -n my-namespace -o jsonpath='{.metadata.annotations.openshift\.io/scc}'
 
 # Review SCC details
 oc describe scc restricted-v2
@@ -130,7 +130,7 @@ oc describe scc anyuid
 oc adm policy who-can use scc/anyuid
 
 # Add SCC to service account (use sparingly)
-oc adm policy add-scc-to-user anyuid -z ${SA_NAME} -n ${NAMESPACE}
+oc adm policy add-scc-to-user anyuid -z my-service-account -n my-namespace
 ```
 
 ---
@@ -144,8 +144,8 @@ oc adm policy add-scc-to-user anyuid -z ${SA_NAME} -n ${NAMESPACE}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: ${APP_NAME}-role
-  namespace: ${NAMESPACE}
+  name: my-app-role
+  namespace: my-namespace
 rules:
   # Specific resources, specific verbs — never wildcards
   - apiGroups: [""]
@@ -157,21 +157,21 @@ rules:
   # Resource names for extra restriction
   - apiGroups: [""]
     resources: ["secrets"]
-    resourceNames: ["${APP_NAME}-config"]
+    resourceNames: ["my-app-config"]
     verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: ${APP_NAME}-binding
-  namespace: ${NAMESPACE}
+  name: my-app-binding
+  namespace: my-namespace
 subjects:
   - kind: ServiceAccount
-    name: ${APP_NAME}
-    namespace: ${NAMESPACE}
+    name: my-app
+    namespace: my-namespace
 roleRef:
   kind: Role
-  name: ${APP_NAME}-role
+  name: my-app-role
   apiGroup: rbac.authorization.k8s.io
 ```
 
@@ -180,7 +180,7 @@ roleRef:
 ```bash
 
 # Check who can perform an action
-kubectl auth can-i create deployments --namespace ${NAMESPACE} --as system:serviceaccount:${NAMESPACE}:${SA_NAME}
+kubectl auth can-i create deployments --namespace my-namespace --as system:serviceaccount:my-namespace:my-service-account
 
 # List all ClusterRoleBindings with cluster-admin
 kubectl get clusterrolebindings -o json | jq -r '.items[] | select(.roleRef.name=="cluster-admin") | "\(.metadata.name) → \(.subjects[]?.name // "none")"'
@@ -189,7 +189,7 @@ kubectl get clusterrolebindings -o json | jq -r '.items[] | select(.roleRef.name
 kubectl get clusterroles -o json | jq -r '.items[] | select(.rules[]? | (.apiGroups[]? == "*") or (.resources[]? == "*") or (.verbs[]? == "*")) | .metadata.name'
 
 # Check service account permissions
-kubectl auth can-i --list --as system:serviceaccount:${NAMESPACE}:${SA_NAME}
+kubectl auth can-i --list --as system:serviceaccount:my-namespace:my-service-account
 ```
 
 ---
@@ -204,7 +204,7 @@ apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   name: default-deny-all
-  namespace: ${NAMESPACE}
+  namespace: my-namespace
 spec:
   podSelector: {}
   policyTypes:
@@ -218,12 +218,12 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: allow-${APP_NAME}
-  namespace: ${NAMESPACE}
+  name: allow-my-app
+  namespace: my-namespace
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: ${APP_NAME}
+      app.kubernetes.io/name: my-app
   policyTypes:
     - Ingress
     - Egress
@@ -231,10 +231,10 @@ spec:
     - from:
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: ${ALLOWED_NAMESPACE}
+              kubernetes.io/metadata.name: my-namespace
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: ${ALLOWED_APP}
+              app.kubernetes.io/name: my-app
       ports:
         - protocol: TCP
           port: 8080
@@ -249,7 +249,7 @@ spec:
     - to:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: ${DATABASE}
+              app.kubernetes.io/name: my-database
       ports:
         - protocol: TCP
           port: 5432
@@ -277,11 +277,11 @@ done
 vault status
 
 # Read secret
-vault kv get -mount=secret ${APP_NAME}/db
+vault kv get -mount=secret my-app/db
 
 # Write/rotate secret
-vault kv put -mount=secret ${APP_NAME}/db \
-  username="${DB_USER}" \
+vault kv put -mount=secret my-app/db \
+  username="db-user" \
   password="$(openssl rand -base64 32)"
 
 # Enable KV secrets engine
@@ -290,20 +290,20 @@ vault secrets enable -path=secret kv-v2
 # Configure Kubernetes auth
 vault auth enable kubernetes
 vault write auth/kubernetes/config \
-  kubernetes_host="https://${K8S_HOST}:6443"
+  kubernetes_host="https://https://api.my-cluster.example.com:6443"
 
 # Create policy
-vault policy write ${APP_NAME} - << EOF
-path "secret/data/${APP_NAME}/*" {
+vault policy write my-app - << EOF
+path "secret/data/my-app/*" {
   capabilities = ["read"]
 }
 EOF
 
 # Create role for service account
-vault write auth/kubernetes/role/${APP_NAME} \
-  bound_service_account_names=${APP_NAME} \
-  bound_service_account_namespaces=${NAMESPACE} \
-  policies=${APP_NAME} \
+vault write auth/kubernetes/role/my-app \
+  bound_service_account_names=my-app \
+  bound_service_account_namespaces=my-namespace \
+  policies=my-app \
   ttl=1h
 ```
 
@@ -333,20 +333,20 @@ spec:
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: ${APP_NAME}-secrets
-  namespace: ${NAMESPACE}
+  name: my-app-secrets
+  namespace: my-namespace
 spec:
   refreshInterval: 1h
   secretStoreRef:
     kind: ClusterSecretStore
     name: vault-backend
   target:
-    name: ${APP_NAME}-secrets
+    name: my-app-secrets
     creationPolicy: Owner
   data:
     - secretKey: DATABASE_URL
       remoteRef:
-        key: secret/data/${APP_NAME}/db
+        key: secret/data/my-app/db
         property: url
 ```
 
@@ -363,29 +363,29 @@ spec:
 ```bash
 # Create secret
 aws secretsmanager create-secret \
-  --name "prod/${APP_NAME}/db-credentials" \
-  --description "Database credentials for ${APP_NAME}" \
+  --name "prod/my-app/db-credentials" \
+  --description "Database credentials for my-app" \
   --secret-string '{"username":"appuser","password":"changeme","host":"db.example.com","port":5432}'
 
 # Get secret value
 aws secretsmanager get-secret-value \
-  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --secret-id "prod/my-app/db-credentials" \
   --query SecretString \
   --output text
 
 # Update secret
 aws secretsmanager update-secret \
-  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --secret-id "prod/my-app/db-credentials" \
   --secret-string '{"username":"appuser","password":"newpassword","host":"db.example.com","port":5432}'
 
 # Rotate secret automatically
 aws secretsmanager rotate-secret \
-  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --secret-id "prod/my-app/db-credentials" \
   --rotation-lambda-arn arn:aws:lambda:us-east-1:123456789012:function:rotation-function
 
 # Delete secret (with recovery window)
 aws secretsmanager delete-secret \
-  --secret-id "prod/${APP_NAME}/db-credentials" \
+  --secret-id "prod/my-app/db-credentials" \
   --recovery-window-in-days 7
 ```
 
@@ -401,7 +401,7 @@ aws secretsmanager delete-secret \
         "secretsmanager:GetSecretValue",
         "secretsmanager:DescribeSecret"
       ],
-      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/${APP_NAME}/*"
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/my-app/*"
     },
     {
       "Effect": "Allow",
@@ -409,7 +409,7 @@ aws secretsmanager delete-secret \
         "secretsmanager:PutSecretValue",
         "secretsmanager:UpdateSecret"
       ],
-      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/${APP_NAME}/*"
+      "Resource": "arn:aws:secretsmanager:us-east-1:123456789012:secret:prod/my-app/*"
     }
   ]
 }
@@ -431,19 +431,19 @@ spec:
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: ${APP_NAME}-secrets
+  name: my-app-secrets
 spec:
   refreshInterval: 1h
   secretStoreRef:
     name: aws-secrets-manager
     kind: ClusterSecretStore
   target:
-    name: ${APP_NAME}-secrets
+    name: my-app-secrets
     creationPolicy: Owner
   data:
     - secretKey: DB_PASSWORD
       remoteRef:
-        key: prod/${APP_NAME}/db-credentials
+        key: prod/my-app/db-credentials
         property: password
 ```
 
@@ -456,45 +456,45 @@ spec:
 ```bash
 # Create Key Vault
 az keyvault create \
-  --name ${KV_NAME} \
-  --resource-group ${RG} \
-  --location ${LOCATION} \
+  --name my-keyvault \
+  --resource-group my-resource-group \
+  --location eastus \
   --enable-rbac-authorization true
 
 # Set secret
 az keyvault secret set \
-  --vault-name ${KV_NAME} \
+  --vault-name my-keyvault \
   --name "db-password" \
   --value "changeme" \
-  --description "Database password for ${APP_NAME}"
+  --description "Database password for my-app"
 
 # Get secret
 az keyvault secret show \
-  --vault-name ${KV_NAME} \
+  --vault-name my-keyvault \
   --name "db-password" \
   --query value \
   --output tsv
 
 # Update secret
 az keyvault secret set \
-  --vault-name ${KV_NAME} \
+  --vault-name my-keyvault \
   --name "db-password" \
   --value "newpassword"
 
 # Enable secret versioning
 az keyvault secret set-attributes \
-  --vault-name ${KV_NAME} \
+  --vault-name my-keyvault \
   --name "db-password" \
   --enabled true
 
 # Delete secret (soft delete enabled by default)
 az keyvault secret delete \
-  --vault-name ${KV_NAME} \
+  --vault-name my-keyvault \
   --name "db-password"
 
 # Purge deleted secret
 az keyvault secret purge \
-  --vault-name ${KV_NAME} \
+  --vault-name my-keyvault \
   --name "db-password"
 ```
 
@@ -503,15 +503,15 @@ az keyvault secret purge \
 ```bash
 # Assign Key Vault Secrets User role to service principal
 az role assignment create \
-  --assignee ${CLIENT_ID} \
+  --assignee 00000000-0000-0000-0000-000000000000 \
   --role "Key Vault Secrets User" \
-  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+  --scope "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-resource-group/providers/Microsoft.KeyVault/vaults/my-keyvault"
 
 # Assign Key Vault Contributor role
 az role assignment create \
-  --assignee ${CLIENT_ID} \
+  --assignee 00000000-0000-0000-0000-000000000000 \
   --role "Key Vault Contributor" \
-  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+  --scope "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-resource-group/providers/Microsoft.KeyVault/vaults/my-keyvault"
 ```
 
 ### Azure Workload Identity Setup
@@ -519,25 +519,25 @@ az role assignment create \
 ```bash
 # Create managed identity
 az identity create \
-  --name ${IDENTITY_NAME} \
-  --resource-group ${RG}
+  --name my-identity \
+  --resource-group my-resource-group
 
 # Get client ID
-CLIENT_ID=$(az identity show -n ${IDENTITY_NAME} -g ${RG} --query clientId -o tsv)
+CLIENT_ID=$(az identity show -n my-identity -g my-resource-group --query clientId -o tsv)
 
 # Create federated identity credential
 az identity federated-credential create \
   --name "kubernetes-federated-credential" \
-  --identity-name ${IDENTITY_NAME} \
-  --resource-group ${RG} \
+  --identity-name my-identity \
+  --resource-group my-resource-group \
   --issuer "https://kubernetes.default.svc" \
-  --subject "system:serviceaccount:${NAMESPACE}:${SERVICE_ACCOUNT}"
+  --subject "system:serviceaccount:my-namespace:my-service-account"
 
 # Assign role to managed identity
 az role assignment create \
-  --assignee ${CLIENT_ID} \
+  --assignee 00000000-0000-0000-0000-000000000000 \
   --role "Key Vault Secrets User" \
-  --scope "/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.KeyVault/vaults/${KV_NAME}"
+  --scope "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-resource-group/providers/Microsoft.KeyVault/vaults/my-keyvault"
 ```
 
 ### External Secrets Operator with Azure Key Vault
@@ -550,24 +550,24 @@ metadata:
 spec:
   provider:
     azure:
-      tenantId: ${AZURE_TENANT_ID}
-      clientId: ${AZURE_CLIENT_ID}
+      tenantId: 00000000-0000-0000-0000-000000000000
+      clientId: 00000000-0000-0000-0000-000000000000
       clientSecret:
         name: azure-sp-secret
         namespace: external-secrets
-      vaultUrl: "https://${KV_NAME}.vault.azure.net"
+      vaultUrl: "https://my-keyvault.vault.azure.net"
 ---
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
-  name: ${APP_NAME}-secrets
+  name: my-app-secrets
 spec:
   refreshInterval: 1h
   secretStoreRef:
     name: azure-key-vault
     kind: ClusterSecretStore
   target:
-    name: ${APP_NAME}-secrets
+    name: my-app-secrets
     creationPolicy: Owner
   data:
     - secretKey: DB_PASSWORD
@@ -587,14 +587,14 @@ spec:
 cosign generate-key-pair
 
 # Sign image
-cosign sign --key cosign.key ${REGISTRY}/${IMAGE}:${TAG}
+cosign sign --key cosign.key registry.example.com/my-app:v1.0.0:v1.0.0
 
 # Verify image
-cosign verify --key cosign.pub ${REGISTRY}/${IMAGE}:${TAG}
+cosign verify --key cosign.pub registry.example.com/my-app:v1.0.0:v1.0.0
 
 # Sign with keyless (Fulcio + Rekor)
-cosign sign ${REGISTRY}/${IMAGE}:${TAG}
-cosign verify --certificate-identity ${EMAIL} --certificate-oidc-issuer ${ISSUER} ${REGISTRY}/${IMAGE}:${TAG}
+cosign sign registry.example.com/my-app:v1.0.0:v1.0.0
+cosign verify --certificate-identity user@example.com --certificate-oidc-issuer my-issuer registry.example.com/my-app:v1.0.0:v1.0.0
 ```
 
 ### Kyverno Image Verification Policy
@@ -616,13 +616,13 @@ spec:
                 - Pod
       verifyImages:
         - imageReferences:
-            - "${REGISTRY}/*"
+            - "registry.example.com/*"
           attestors:
             - entries:
                 - keys:
                     publicKeys: |-
                       -----BEGIN PUBLIC KEY-----
-                      ${PUBLIC_KEY}
+                      my-public-key
                       -----END PUBLIC KEY-----
 ```
 
@@ -799,7 +799,7 @@ kubectl get pods -A -o json | jq -r '.items[] | .spec.containers[]? | select(.en
 
 ```yaml
 spec:
-  serviceAccountName: ${APP_NAME}
+  serviceAccountName: my-app
   automountServiceAccountToken: false
   securityContext:
     runAsNonRoot: true
@@ -809,8 +809,8 @@ spec:
     seccompProfile:
       type: RuntimeDefault
   containers:
-    - name: ${APP_NAME}
-      image: ${REGISTRY}/${APP_NAME}:${TAG}
+    - name: my-app
+      image: registry.example.com/my-app:v1.0.0
       securityContext:
         allowPrivilegeEscalation: false
         readOnlyRootFilesystem: true
@@ -839,13 +839,13 @@ spec:
 # Scan image with Trivy
 
 # Direct Trivy scan
-trivy image --severity CRITICAL,HIGH ${REGISTRY}/${IMAGE}:${TAG}
+trivy image --severity CRITICAL,HIGH registry.example.com/my-app:v1.0.0:v1.0.0
 
 # Trivy with SBOM
-trivy image --format spdx-json ${REGISTRY}/${IMAGE}:${TAG} > sbom.json
+trivy image --format spdx-json registry.example.com/my-app:v1.0.0:v1.0.0 > sbom.json
 
 # Grype scan
-grype ${REGISTRY}/${IMAGE}:${TAG}
+grype registry.example.com/my-app:v1.0.0:v1.0.0
 ```
 
 ---

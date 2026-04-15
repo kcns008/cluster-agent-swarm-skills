@@ -85,10 +85,10 @@ Every namespace gets:
 ```bash
 
 # Manual creation
-kubectl create namespace ${NAMESPACE}
-kubectl label namespace ${NAMESPACE} \
-  team=${TEAM} \
-  environment=${ENV} \
+kubectl create namespace my-namespace
+kubectl label namespace my-namespace \
+  team=my-team \
+  environment=production \
   managed-by=desk-agent
 ```
 
@@ -98,14 +98,14 @@ kubectl label namespace ${NAMESPACE} \
 apiVersion: v1
 kind: ResourceQuota
 metadata:
-  name: ${TEAM}-quota
-  namespace: ${NAMESPACE}
+  name: my-team-quota
+  namespace: my-namespace
 spec:
   hard:
-    requests.cpu: "${CPU_REQUEST:-4}"
-    requests.memory: "${MEM_REQUEST:-8Gi}"
-    limits.cpu: "${CPU_LIMIT:-8}"
-    limits.memory: "${MEM_LIMIT:-16Gi}"
+    requests.cpu: "4"
+    requests.memory: "8Gi"
+    limits.cpu: "8"
+    limits.memory: "16Gi"
     persistentvolumeclaims: "10"
     pods: "50"
     services: "20"
@@ -121,7 +121,7 @@ apiVersion: v1
 kind: LimitRange
 metadata:
   name: default-limits
-  namespace: ${NAMESPACE}
+  namespace: my-namespace
 spec:
   limits:
     - type: Container
@@ -148,13 +148,13 @@ spec:
 
 ```bash
 # Create project (OpenShift)
-oc new-project ${NAMESPACE} \
-  --display-name="${TEAM} ${ENV}" \
-  --description="Namespace for ${TEAM} team (${ENV} environment)"
+oc new-project my-namespace \
+  --display-name="my-team production" \
+  --description="Namespace for my-team team (production environment)"
 
 # Add team members
-oc adm policy add-role-to-user edit ${USER} -n ${NAMESPACE}
-oc adm policy add-role-to-group view ${TEAM_GROUP} -n ${NAMESPACE}
+oc adm policy add-role-to-user edit my-user -n my-namespace
+oc adm policy add-role-to-group view my-team-group -n my-namespace
 ```
 
 ---
@@ -167,10 +167,10 @@ oc adm policy add-role-to-group view ${TEAM_GROUP} -n ${NAMESPACE}
 # Use the helper script for automated diagnosis
 
 # Manual diagnosis steps
-kubectl get pods -n ${NAMESPACE} -o wide
-kubectl describe pod ${POD} -n ${NAMESPACE}
-kubectl logs ${POD} -n ${NAMESPACE} --tail=100
-kubectl get events -n ${NAMESPACE} --sort-by='.lastTimestamp' | tail -20
+kubectl get pods -n my-namespace -o wide
+kubectl describe pod my-pod -n my-namespace
+kubectl logs my-pod -n my-namespace --tail=100
+kubectl get events -n my-namespace --sort-by='.lastTimestamp' | tail -20
 ```
 
 ### CrashLoopBackOff
@@ -179,7 +179,7 @@ kubectl get events -n ${NAMESPACE} --sort-by='.lastTimestamp' | tail -20
 
 ```bash
 # Check exit code
-kubectl get pod ${POD} -n ${NAMESPACE} -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode}'
+kubectl get pod my-pod -n my-namespace -o jsonpath='{.status.containerStatuses[0].lastState.terminated.exitCode}'
 
 # Common exit codes:
 # 0   = Clean exit (check liveness probe)
@@ -189,10 +189,10 @@ kubectl get pod ${POD} -n ${NAMESPACE} -o jsonpath='{.status.containerStatuses[0
 # 143 = SIGTERM
 
 # Check logs from crashed container
-kubectl logs ${POD} -n ${NAMESPACE} --previous
+kubectl logs my-pod -n my-namespace --previous
 
 # Check if liveness probe is failing
-kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 5 "Liveness"
+kubectl describe pod my-pod -n my-namespace | grep -A 5 "Liveness"
 
 # Common fixes:
 # 1. Fix application errors (check logs)
@@ -207,20 +207,20 @@ kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 5 "Liveness"
 
 ```bash
 # Check current memory usage vs limits
-kubectl top pod ${POD} -n ${NAMESPACE}
-kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 3 "Limits"
+kubectl top pod my-pod -n my-namespace
+kubectl describe pod my-pod -n my-namespace | grep -A 3 "Limits"
 
 # Check OOMKilled events
-kubectl get events -n ${NAMESPACE} --field-selector reason=OOMKilling
+kubectl get events -n my-namespace --field-selector reason=OOMKilling
 
 # Fix: Increase memory limit
-kubectl set resources deployment/${DEPLOY} \
-  -n ${NAMESPACE} \
+kubectl set resources deployment/my-deployment \
+  -n my-namespace \
   --limits=memory=512Mi \
   --requests=memory=256Mi
 
 # Or patch the deployment
-kubectl patch deployment ${DEPLOY} -n ${NAMESPACE} --type json -p '[
+kubectl patch deployment my-deployment -n my-namespace --type json -p '[
   {"op": "replace", "path": "/spec/template/spec/containers/0/resources/limits/memory", "value": "512Mi"},
   {"op": "replace", "path": "/spec/template/spec/containers/0/resources/requests/memory", "value": "256Mi"}
 ]'
@@ -232,27 +232,27 @@ kubectl patch deployment ${DEPLOY} -n ${NAMESPACE} --type json -p '[
 
 ```bash
 # Check the exact error
-kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 5 "Events"
+kubectl describe pod my-pod -n my-namespace | grep -A 5 "Events"
 
 # Common causes:
 # 1. Image doesn't exist
-kubectl run test --image=${IMAGE} --restart=Never --dry-run=client -o yaml
+kubectl run test --image=my-app:v1.0.0 --restart=Never --dry-run=client -o yaml
 
 # 2. Missing pull secret
-kubectl get secret -n ${NAMESPACE} | grep docker
+kubectl get secret -n my-namespace | grep docker
 kubectl create secret docker-registry regcred \
-  --docker-server=${REGISTRY} \
-  --docker-username=${USER} \
-  --docker-password=${PASS} \
-  -n ${NAMESPACE}
+  --docker-server=registry.example.com \
+  --docker-username=my-user \
+  --docker-password=PASSWORD \
+  -n my-namespace
 
 # 3. Link pull secret to service account
 kubectl patch serviceaccount default \
-  -n ${NAMESPACE} \
+  -n my-namespace \
   -p '{"imagePullSecrets": [{"name": "regcred"}]}'
 
 # OpenShift: Link image pull secret
-oc secrets link default regcred --for=pull -n ${NAMESPACE}
+oc secrets link default regcred --for=pull -n my-namespace
 ```
 
 ### Pending
@@ -261,7 +261,7 @@ oc secrets link default regcred --for=pull -n ${NAMESPACE}
 
 ```bash
 # Check why the pod is pending
-kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 10 "Events"
+kubectl describe pod my-pod -n my-namespace | grep -A 10 "Events"
 
 # Common causes:
 # 1. Insufficient resources
@@ -269,16 +269,16 @@ kubectl describe nodes | grep -A 5 "Allocated resources"
 kubectl top nodes
 
 # 2. No matching node (nodeSelector, taints/tolerations)
-kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.nodeSelector'
-kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.tolerations'
+kubectl get pod my-pod -n my-namespace -o json | jq '.spec.nodeSelector'
+kubectl get pod my-pod -n my-namespace -o json | jq '.spec.tolerations'
 kubectl get nodes -o json | jq '.items[] | {name: .metadata.name, taints: .spec.taints}'
 
 # 3. PVC not bound
-kubectl get pvc -n ${NAMESPACE}
-kubectl describe pvc ${PVC} -n ${NAMESPACE}
+kubectl get pvc -n my-namespace
+kubectl describe pvc my-pvc -n my-namespace
 
 # 4. Quota exceeded
-kubectl describe resourcequota -n ${NAMESPACE}
+kubectl describe resourcequota -n my-namespace
 ```
 
 ### CreateContainerConfigError
@@ -287,15 +287,15 @@ kubectl describe resourcequota -n ${NAMESPACE}
 
 ```bash
 # Usually a missing ConfigMap or Secret
-kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 5 "Warning"
+kubectl describe pod my-pod -n my-namespace | grep -A 5 "Warning"
 
 # Check if referenced ConfigMaps exist
-kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.containers[].envFrom[]?.configMapRef.name' 2>/dev/null
-kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.containers[].env[]?.valueFrom?.configMapKeyRef.name' 2>/dev/null
+kubectl get pod my-pod -n my-namespace -o json | jq '.spec.containers[].envFrom[]?.configMapRef.name' 2>/dev/null
+kubectl get pod my-pod -n my-namespace -o json | jq '.spec.containers[].env[]?.valueFrom?.configMapKeyRef.name' 2>/dev/null
 
 # Check if referenced Secrets exist
-kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.containers[].envFrom[]?.secretRef.name' 2>/dev/null
-kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.containers[].env[]?.valueFrom?.secretKeyRef.name' 2>/dev/null
+kubectl get pod my-pod -n my-namespace -o json | jq '.spec.containers[].envFrom[]?.secretRef.name' 2>/dev/null
+kubectl get pod my-pod -n my-namespace -o json | jq '.spec.containers[].env[]?.valueFrom?.secretKeyRef.name' 2>/dev/null
 ```
 
 ---
@@ -318,17 +318,17 @@ kubectl get pod ${POD} -n ${NAMESPACE} -o json | jq '.spec.containers[].env[]?.v
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ${APP_NAME}
-  namespace: ${NAMESPACE}
+  name: my-app
+  namespace: my-namespace
   labels:
-    app.kubernetes.io/name: ${APP_NAME}
-    app.kubernetes.io/version: ${VERSION}
+    app.kubernetes.io/name: my-app
+    app.kubernetes.io/version: v1.0.0
     app.kubernetes.io/managed-by: desk-agent
 spec:
-  replicas: ${REPLICAS:-2}
+  replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: ${APP_NAME}
+      app.kubernetes.io/name: my-app
   strategy:
     type: RollingUpdate
     rollingUpdate:
@@ -337,10 +337,10 @@ spec:
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: ${APP_NAME}
-        app.kubernetes.io/version: ${VERSION}
+        app.kubernetes.io/name: my-app
+        app.kubernetes.io/version: v1.0.0
     spec:
-      serviceAccountName: ${APP_NAME}
+      serviceAccountName: my-app
       automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
@@ -349,10 +349,10 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: ${APP_NAME}
-          image: ${IMAGE}
+        - name: my-app
+          image: my-app:v1.0.0
           ports:
-            - containerPort: ${PORT:-8080}
+            - containerPort: 8080
               name: http
               protocol: TCP
           securityContext:
@@ -362,11 +362,11 @@ spec:
               drop: ["ALL"]
           resources:
             requests:
-              cpu: ${CPU_REQUEST:-100m}
-              memory: ${MEM_REQUEST:-128Mi}
+              cpu: 100m
+              memory: 128Mi
             limits:
-              cpu: ${CPU_LIMIT:-500m}
-              memory: ${MEM_LIMIT:-512Mi}
+              cpu: 500m
+              memory: 512Mi
           livenessProbe:
             httpGet:
               path: /healthz
@@ -402,7 +402,7 @@ spec:
           whenUnsatisfiable: DoNotSchedule
           labelSelector:
             matchLabels:
-              app.kubernetes.io/name: ${APP_NAME}
+              app.kubernetes.io/name: my-app
 ```
 
 ### Service Template
@@ -411,19 +411,19 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ${APP_NAME}
-  namespace: ${NAMESPACE}
+  name: my-app
+  namespace: my-namespace
   labels:
-    app.kubernetes.io/name: ${APP_NAME}
+    app.kubernetes.io/name: my-app
 spec:
   type: ClusterIP
   ports:
-    - port: ${PORT:-8080}
+    - port: 8080
       targetPort: http
       protocol: TCP
       name: http
   selector:
-    app.kubernetes.io/name: ${APP_NAME}
+    app.kubernetes.io/name: my-app
 ```
 
 ### HorizontalPodAutoscaler
@@ -432,15 +432,15 @@ spec:
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: ${APP_NAME}
-  namespace: ${NAMESPACE}
+  name: my-app
+  namespace: my-namespace
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: ${APP_NAME}
-  minReplicas: ${MIN_REPLICAS:-2}
-  maxReplicas: ${MAX_REPLICAS:-10}
+    name: my-app
+  minReplicas: 2
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:
@@ -476,40 +476,40 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ${APP_NAME}
-  namespace: ${NAMESPACE}
+  name: my-app
+  namespace: my-namespace
   annotations:
     cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - ${HOST}
-      secretName: ${APP_NAME}-tls
+        - my-host.example.com
+      secretName: my-app-tls
   rules:
-    - host: ${HOST}
+    - host: my-host.example.com
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: ${APP_NAME}
+                name: my-app
                 port:
-                  number: ${PORT:-8080}
+                  number: 8080
 
 ---
 # OpenShift Route
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: ${APP_NAME}
-  namespace: ${NAMESPACE}
+  name: my-app
+  namespace: my-namespace
 spec:
-  host: ${HOST}
+  host: my-host.example.com
   to:
     kind: Service
-    name: ${APP_NAME}
+    name: my-app
   port:
     targetPort: http
   tls:
@@ -597,17 +597,17 @@ payment-service/
 
 ```bash
 # Check if image build succeeded
-kubectl get builds -n ${NAMESPACE} -l app=${APP}  # OpenShift
+kubectl get builds -n my-namespace -l app=my-app  # OpenShift
 
 # Check Tekton pipeline runs
-kubectl get pipelineruns -n ${NAMESPACE}
-kubectl describe pipelinerun ${RUN_NAME} -n ${NAMESPACE}
+kubectl get pipelineruns -n my-namespace
+kubectl describe pipelinerun my-run -n my-namespace
 
 # Check if ArgoCD can see the new image
-argocd app get ${APP} -o json | jq '.status.summary.images'
+argocd app get my-app -o json | jq '.status.summary.images'
 
 # Check if webhook is firing
-kubectl get events -n ${ARGOCD_NS} --field-selector reason=WebhookReceived
+kubectl get events -n argocd --field-selector reason=WebhookReceived
 ```
 
 ---

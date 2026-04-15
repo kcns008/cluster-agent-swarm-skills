@@ -111,26 +111,26 @@ kubectl top nodes
 kubectl get nodes -o json | jq -r '.items[] | "\(.metadata.name)\t\(.status.conditions[] | select(.status=="True") | .type)"'
 
 # Drain node for maintenance (safe)
-kubectl drain ${NODE} \
+kubectl drain my-node \
   --ignore-daemonsets \
   --delete-emptydir-data \
   --grace-period=120 \
   --timeout=600s
 
 # Cordon node (prevent new scheduling)
-kubectl cordon ${NODE}
+kubectl cordon my-node
 
 # Uncordon node (re-enable scheduling)
-kubectl uncordon ${NODE}
+kubectl uncordon my-node
 
 # View pods on a specific node
-kubectl get pods -A --field-selector spec.nodeName=${NODE}
+kubectl get pods -A --field-selector spec.nodeName=my-node
 
 # Label nodes
-kubectl label node ${NODE} node-role.kubernetes.io/gpu=true
+kubectl label node my-node node-role.kubernetes.io/gpu=true
 
 # Taint nodes
-kubectl taint nodes ${NODE} dedicated=gpu:NoSchedule
+kubectl taint nodes my-node dedicated=gpu:NoSchedule
 ```
 
 ### OpenShift Node Management
@@ -140,7 +140,7 @@ kubectl taint nodes ${NODE} dedicated=gpu:NoSchedule
 oc get machinesets -n openshift-machine-api
 
 # Scale a MachineSet
-oc scale machineset ${MACHINESET_NAME} -n openshift-machine-api --replicas=${COUNT}
+oc scale machineset my-machineset -n openshift-machine-api --replicas=3
 
 # View Machines
 oc get machines -n openshift-machine-api
@@ -159,42 +159,42 @@ oc get machinehealthcheck -n openshift-machine-api
 
 ```bash
 # List node groups
-aws eks list-nodegroups --cluster-name ${CLUSTER}
+aws eks list-nodegroups --cluster-name my-cluster
 
 # Describe node group
-aws eks describe-nodegroup --cluster-name ${CLUSTER} --nodegroup-name ${NODEGROUP}
+aws eks describe-nodegroup --cluster-name my-cluster --nodegroup-name my-nodegroup
 
 # Scale node group
 aws eks update-nodegroup-config \
-  --cluster-name ${CLUSTER} \
-  --nodegroup-name ${NODEGROUP} \
-  --scaling-config minSize=${MIN},maxSize=${MAX},desiredSize=${DESIRED}
+  --cluster-name my-cluster \
+  --nodegroup-name my-nodegroup \
+  --scaling-config minSize=2,maxSize=10,desiredSize=3
 
 # Add managed node group
 aws eks create-nodegroup \
-  --cluster-name ${CLUSTER} \
-  --nodegroup-name ${NODEGROUP} \
-  --node-role ${NODE_ROLE_ARN} \
-  --subnets ${SUBNET_IDS} \
-  --instance-types ${INSTANCE_TYPE} \
-  --scaling-config minSize=${MIN},maxSize=${MAX},desiredSize=${DESIRED}
+  --cluster-name my-cluster \
+  --nodegroup-name my-nodegroup \
+  --node-role arn:aws:iam::000000000000:role/my-node-role \
+  --subnets subnet-abcdef12 \
+  --instance-types t3.medium \
+  --scaling-config minSize=2,maxSize=10,desiredSize=3
 ```
 
 ### AKS Node Management
 
 ```bash
 # List node pools
-az aks nodepool list -g ${RG} --cluster-name ${CLUSTER} -o table
+az aks nodepool list -g my-resource-group --cluster-name my-cluster -o table
 
 # Scale node pool
-az aks nodepool scale -g ${RG} --cluster-name ${CLUSTER} -n ${POOL} -c ${COUNT}
+az aks nodepool scale -g my-resource-group --cluster-name my-cluster -n my-pool -c 3
 
 # Add node pool
-az aks nodepool add -g ${RG} --cluster-name ${CLUSTER} \
-  -n ${POOL} -c ${COUNT} --node-vm-size ${VM_SIZE}
+az aks nodepool add -g my-resource-group --cluster-name my-cluster \
+  -n my-pool -c 3 --node-vm-size Standard_D2s_v3
 
 # Add GPU node pool
-az aks nodepool add -g ${RG} --cluster-name ${CLUSTER} \
+az aks nodepool add -g my-resource-group --cluster-name my-cluster \
   -n gpupool -c 2 --node-vm-size Standard_NC6s_v3 \
   --node-taints sku=gpu:NoSchedule
 ```
@@ -203,39 +203,39 @@ az aks nodepool add -g ${RG} --cluster-name ${CLUSTER} \
 
 ```bash
 # List node pools
-gcloud container node-pools list --cluster ${CLUSTER} --region ${REGION}
+gcloud container node-pools list --cluster my-cluster --region us-east-1
 
 # Resize node pool
-gcloud container clusters resize ${CLUSTER} \
-  --node-pool ${POOL} --num-nodes ${COUNT} --region ${REGION}
+gcloud container clusters resize my-cluster \
+  --node-pool my-pool --num-nodes 3 --region us-east-1
 
 # Add node pool
-gcloud container node-pools create ${POOL} \
-  --cluster ${CLUSTER} --region ${REGION} \
-  --machine-type ${MACHINE_TYPE} --num-nodes ${COUNT}
+gcloud container node-pools create my-pool \
+  --cluster my-cluster --region us-east-1 \
+  --machine-type Standard_D2s_v3 --num-nodes 3
 ```
 
 ### ROSA Node Management
 
 ```bash
 # List node groups
-rosa list nodegroups --cluster ${CLUSTER}
+rosa list nodegroups --cluster my-cluster
 
 # Describe node group
-rosa describe nodegroup ${NODEGROUP} --cluster ${CLUSTER}
+rosa describe nodegroup my-nodegroup --cluster my-cluster
 
 # Scale node group
-rosa edit nodegroup ${NODEGROUP} --cluster ${CLUSTER} --min-replicas=${MIN} --max-replicas=${MAX}
+rosa edit nodegroup my-nodegroup --cluster my-cluster --min-replicas=2 --max-replicas=10
 
 # Add node group
-rosa create nodegroup --cluster ${CLUSTER} \
-  --name ${NODEGROUP} \
-  --instance-type ${INSTANCE_TYPE} \
-  --replicas=${COUNT} \
+rosa create nodegroup --cluster my-cluster \
+  --name my-nodegroup \
+  --instance-type t3.medium \
+  --replicas=3 \
   --labels "node-role.kubernetes.io/worker="
 
 # Delete node group
-rosa delete nodegroup ${NODEGROUP} --cluster ${CLUSTER} --yes
+rosa delete nodegroup my-nodegroup --cluster my-cluster --yes
 ```
 
 ### ROSA Cluster Management
@@ -245,32 +245,32 @@ rosa delete nodegroup ${NODEGROUP} --cluster ${CLUSTER} --yes
 rosa list clusters
 
 # Describe cluster
-rosa describe cluster --cluster ${CLUSTER}
+rosa describe cluster --cluster my-cluster
 
 # Show cluster credentials
-rosa show credentials --cluster ${CLUSTER}
+rosa show credentials --cluster my-cluster
 
 # Check cluster status
-rosa list cluster --output json | jq '.[] | select(.id=="${CLUSTER}")'
+rosa list cluster --output json | jq '.[] | select(.id=="my-cluster")'
 
 # Upgrade ROSA cluster
-rosa upgrade cluster --cluster ${CLUSTER}
+rosa upgrade cluster --cluster my-cluster
 
 # Upgrade node group
-rosa upgrade nodegroup ${NODEGROUP} --cluster ${CLUSTER}
+rosa upgrade nodegroup my-nodegroup --cluster my-cluster
 
 # List available upgrades
-rosa list upgrade --cluster ${CLUSTER}
+rosa list upgrade --cluster my-cluster
 ```
 
 ### ROSA STS (Secure Token Service) Management
 
 ```bash
 # List OIDC providers
-rosa list oidc-provider --cluster ${CLUSTER}
+rosa list oidc-provider --cluster my-cluster
 
 # List IAM roles
-rosa list iam-roles --cluster ${CLUSTER}
+rosa list iam-roles --cluster my-cluster
 
 # Check account-wide IAM roles
 rosa list account-roles
@@ -280,36 +280,36 @@ rosa list account-roles
 
 ```bash
 # List ARO clusters
-az aro list -g ${RESOURCE_GROUP} -o table
+az aro list -g my-resource-group -o table
 
 # Describe ARO cluster
-az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} -o json
+az aro show -g my-resource-group -n my-cluster -o json
 
 # Check ARO cluster credentials
-az aro list-credentials -g ${RESOURCE_GROUP} -n ${CLUSTER} -o json
+az aro list-credentials -g my-resource-group -n my-cluster -o json
 
 # Get API server URL
-az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} --query 'apiserverProfile.url'
+az aro show -g my-resource-group -n my-cluster --query 'apiserverProfile.url'
 
 # Get console URL
-az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} --query 'consoleProfile.url'
+az aro show -g my-resource-group -n my-cluster --query 'consoleProfile.url'
 ```
 
 ### ARO Node Management
 
 ```bash
 # List machine pools
-az aro machinepool list -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} -o table
+az aro machinepool list -g my-resource-group --cluster-name my-cluster -o table
 
 # Get machine pool details
-az aro machinepool show -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} -n ${POOL} -o json
+az aro machinepool show -g my-resource-group --cluster-name my-cluster -n my-pool -o json
 
 # Scale machine pool
-az aro machinepool update -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} -n ${POOL} --replicas=${COUNT}
+az aro machinepool update -g my-resource-group --cluster-name my-cluster -n my-pool --replicas=3
 
 # Add machine pool
-az aro machinepool create -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} \
-  -n ${POOL} --replicas=${COUNT} --vm-size ${VM_SIZE}
+az aro machinepool create -g my-resource-group --cluster-name my-cluster \
+  -n my-pool --replicas=3 --vm-size Standard_D2s_v3
 ```
 
 ---
@@ -348,7 +348,7 @@ oc adm upgrade
 oc get clusterversion
 
 # Start upgrade
-oc adm upgrade --to=${VERSION}
+oc adm upgrade --to=v1.0.0
 
 # Monitor upgrade progress
 oc get clusterversion -w
@@ -371,80 +371,80 @@ oc get mcp worker -o jsonpath='{.status.conditions[*].type}{"\n"}{.status.condit
 
 ```bash
 # Check available upgrades
-aws eks describe-cluster --name ${CLUSTER} --query 'cluster.version'
+aws eks describe-cluster --name my-cluster --query 'cluster.version'
 
 # Upgrade control plane
-aws eks update-cluster-version --name ${CLUSTER} --kubernetes-version ${VERSION}
+aws eks update-cluster-version --name my-cluster --kubernetes-version v1.0.0
 
 # Wait for control plane upgrade
-aws eks wait cluster-active --name ${CLUSTER}
+aws eks wait cluster-active --name my-cluster
 
 # Upgrade each node group
 aws eks update-nodegroup-version \
-  --cluster-name ${CLUSTER} \
-  --nodegroup-name ${NODEGROUP} \
-  --kubernetes-version ${VERSION}
+  --cluster-name my-cluster \
+  --nodegroup-name my-nodegroup \
+  --kubernetes-version v1.0.0
 ```
 
 ### AKS Upgrades
 
 ```bash
 # Check available upgrades
-az aks get-upgrades -g ${RG} -n ${CLUSTER} -o table
+az aks get-upgrades -g my-resource-group -n my-cluster -o table
 
 # Upgrade cluster
-az aks upgrade -g ${RG} -n ${CLUSTER} --kubernetes-version ${VERSION}
+az aks upgrade -g my-resource-group -n my-cluster --kubernetes-version v1.0.0
 
 # Upgrade with node surge
-az aks upgrade -g ${RG} -n ${CLUSTER} --kubernetes-version ${VERSION} --max-surge 33%
+az aks upgrade -g my-resource-group -n my-cluster --kubernetes-version v1.0.0 --max-surge 33%
 ```
 
 ### GKE Upgrades
 
 ```bash
 # Check available upgrades
-gcloud container get-server-config --region ${REGION}
+gcloud container get-server-config --region us-east-1
 
 # Upgrade master
-gcloud container clusters upgrade ${CLUSTER} --master --cluster-version ${VERSION} --region ${REGION}
+gcloud container clusters upgrade my-cluster --master --cluster-version v1.0.0 --region us-east-1
 
 # Upgrade node pool
-gcloud container clusters upgrade ${CLUSTER} --node-pool ${POOL} --cluster-version ${VERSION} --region ${REGION}
+gcloud container clusters upgrade my-cluster --node-pool my-pool --cluster-version v1.0.0 --region us-east-1
 ```
 
 ### ROSA Upgrades
 
 ```bash
 # List available upgrades
-rosa list upgrade --cluster ${CLUSTER}
+rosa list upgrade --cluster my-cluster
 
 # Check current version
-rosa describe cluster --cluster ${CLUSTER} | grep "Version"
+rosa describe cluster --cluster my-cluster | grep "Version"
 
 # Upgrade cluster (control plane)
-rosa upgrade cluster --cluster ${CLUSTER} --version ${VERSION}
+rosa upgrade cluster --cluster my-cluster --version v1.0.0
 
 # Upgrade node group
-rosa upgrade nodegroup ${NODEGROUP} --cluster ${CLUSTER}
+rosa upgrade nodegroup my-nodegroup --cluster my-cluster
 
 # Monitor upgrade status
-rosa describe cluster --cluster ${CLUSTER}
+rosa describe cluster --cluster my-cluster
 ```
 
 ### ARO Upgrades
 
 ```bash
 # Check available upgrades
-az aro get-upgrades -g ${RESOURCE_GROUP} -n ${CLUSTER} -o table
+az aro get-upgrades -g my-resource-group -n my-cluster -o table
 
 # Upgrade ARO cluster
-az aro upgrade -g ${RESOURCE_GROUP} -n ${CLUSTER} --kubernetes-version ${VERSION}
+az aro upgrade -g my-resource-group -n my-cluster --kubernetes-version v1.0.0
 
 # Monitor upgrade status
-az aro show -g ${RESOURCE_GROUP} -n ${CLUSTER} --query 'provisioningState'
+az aro show -g my-resource-group -n my-cluster --query 'provisioningState'
 
 # Get upgrade history
-az aro list-upgrades -g ${RESOURCE_GROUP} -n ${CLUSTER} -o table
+az aro list-upgrades -g my-resource-group -n my-cluster -o table
 ```
 
 ---
@@ -456,13 +456,13 @@ az aro list-upgrades -g ${RESOURCE_GROUP} -n ${CLUSTER} -o table
 ```bash
 # OpenShift etcd health
 oc get pods -n openshift-etcd
-oc rsh -n openshift-etcd etcd-${MASTER_NODE} etcdctl endpoint health --cluster
-oc rsh -n openshift-etcd etcd-${MASTER_NODE} etcdctl member list -w table
-oc rsh -n openshift-etcd etcd-${MASTER_NODE} etcdctl endpoint status --cluster -w table
+oc rsh -n openshift-etcd etcd-my-master etcdctl endpoint health --cluster
+oc rsh -n openshift-etcd etcd-my-master etcdctl member list -w table
+oc rsh -n openshift-etcd etcd-my-master etcdctl endpoint status --cluster -w table
 
 # Standard Kubernetes etcd health
 kubectl get pods -n kube-system -l component=etcd
-kubectl exec -n kube-system etcd-${MASTER_NODE} -- etcdctl endpoint health \
+kubectl exec -n kube-system etcd-my-master -- etcdctl endpoint health \
   --cacert /etc/kubernetes/pki/etcd/ca.crt \
   --cert /etc/kubernetes/pki/etcd/healthcheck-client.crt \
   --key /etc/kubernetes/pki/etcd/healthcheck-client.key
@@ -472,7 +472,7 @@ kubectl exec -n kube-system etcd-${MASTER_NODE} -- etcdctl endpoint health \
 
 ```bash
 # OpenShift etcd backup
-oc debug node/${MASTER_NODE} -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/etcd-backup
+oc debug node/my-master -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/etcd-backup
 
 # Standard Kubernetes etcd snapshot
 ETCDCTL_API=3 etcdctl snapshot save /backup/etcd-$(date +%Y%m%d-%H%M%S).db \
@@ -488,13 +488,13 @@ etcdctl snapshot status /backup/etcd-*.db -w table
 
 ```bash
 # Check etcd database size
-oc rsh -n openshift-etcd etcd-${MASTER_NODE} etcdctl endpoint status --cluster -w table | awk '{print $3, $4}'
+oc rsh -n openshift-etcd etcd-my-master etcdctl endpoint status --cluster -w table | awk '{print $3, $4}'
 
 # Defragment etcd (one member at a time!)
-oc rsh -n openshift-etcd etcd-${MASTER_NODE} etcdctl defrag --endpoints=${ENDPOINT}
+oc rsh -n openshift-etcd etcd-my-master etcdctl defrag --endpoints=https://api.example.com
 
 # Check for slow requests
-oc logs -n openshift-etcd etcd-${MASTER_NODE} --tail=100 | grep -i "slow"
+oc logs -n openshift-etcd etcd-my-master --tail=100 | grep -i "slow"
 
 # Monitor etcd metrics via Prometheus
 # etcd_disk_wal_fsync_duration_seconds_bucket
@@ -550,7 +550,7 @@ oc get machineautoscaler -n openshift-machine-api
 
 # Horizontal Pod Autoscaler
 kubectl get hpa -A
-kubectl describe hpa ${HPA_NAME} -n ${NAMESPACE}
+kubectl describe hpa my-hpa -n my-namespace
 
 # Vertical Pod Autoscaler
 kubectl get vpa -A
@@ -573,7 +573,7 @@ kubectl run dnstest --image=busybox:1.36 --rm -it --restart=Never -- nslookup ku
 
 # Pod-to-pod connectivity test
 kubectl run nettest --image=nicolaka/netshoot --rm -it --restart=Never -- \
-  curl -s -o /dev/null -w "%{http_code}" http://${SERVICE_NAME}.${NAMESPACE}:${PORT}
+  curl -s -o /dev/null -w "%{http_code}" http://my-service.my-namespace:8080
 
 # OpenShift SDN/OVN diagnostics
 oc get network.operator cluster -o yaml
@@ -629,7 +629,7 @@ kubectl get volumesnapshotclasses
 kubectl get pods -A -o json | jq -r '.items[] | select(.status.conditions[]? | select(.type=="PodScheduled" and .reason=="Unschedulable")) | "\(.metadata.namespace)/\(.metadata.name)"'
 
 # Check PVC events
-kubectl describe pvc ${PVC_NAME} -n ${NAMESPACE} | grep -A10 "Events"
+kubectl describe pvc my-pvc -n my-namespace | grep -A10 "Events"
 
 # OpenShift storage operator
 oc get pods -n openshift-storage
@@ -697,12 +697,12 @@ kubectl get pvc -A --field-selector=status.phase=Pending
 
 # 2. Cluster resource backup (Velero)
 velero backup create cluster-backup-$(date +%Y%m%d) \
-  --include-namespaces ${NAMESPACES} \
+  --include-namespaces my-namespace \
   --ttl 720h
 
 # 3. Check Velero backup status
 velero backup get
-velero backup describe ${BACKUP_NAME}
+velero backup describe my-backup
 ```
 
 ### Recovery Procedures
@@ -716,7 +716,7 @@ velero backup describe ${BACKUP_NAME}
 # 4. Verify cluster health
 
 # Restore from Velero
-velero restore create --from-backup ${BACKUP_NAME}
+velero restore create --from-backup my-backup
 velero restore get
 ```
 
@@ -728,82 +728,82 @@ velero restore get
 
 ```bash
 # List resources in resource group
-az resource list -g ${RESOURCE_GROUP} -o table
+az resource list -g my-resource-group -o table
 
 # Check virtual machines
-az vm list -g ${RESOURCE_GROUP} -o table
+az vm list -g my-resource-group -o table
 
 # Check virtual network
-az network vnet list -g ${RESOURCE_GROUP} -o table
+az network vnet list -g my-resource-group -o table
 
 # Check network security groups
-az network nsg list -g ${RESOURCE_GROUP} -o table
+az network nsg list -g my-resource-group -o table
 
 # Check load balancers
-az network lb list -g ${RESOURCE_GROUP} -o table
+az network lb list -g my-resource-group -o table
 
 # Check private endpoints
-az network private-endpoint list -g ${RESOURCE_GROUP} -o table
+az network private-endpoint list -g my-resource-group -o table
 
 # Check private DNS zones
-az network private-dns zone list -g ${RESOURCE_GROUP} -o table
+az network private-dns zone list -g my-resource-group -o table
 ```
 
 ### Azure Network Diagnostics
 
 ```bash
 # Check VNet peering
-az network vnet peering list -g ${RESOURCE_GROUP} --vnet-name ${VNET}
+az network vnet peering list -g my-resource-group --vnet-name my-vnet
 
 # Check ExpressRoute circuits
 az network express-route list -o table
 
 # Check VPN gateways
-az network vpn-connection list -g ${RESOURCE_GROUP} -o table
+az network vpn-connection list -g my-resource-group -o table
 
 # Check application gateways
-az network application-gateway list -g ${RESOURCE_GROUP} -o table
+az network application-gateway list -g my-resource-group -o table
 
 # Check Azure Firewall
-az network firewall list -g ${RESOURCE_GROUP} -o table
+az network firewall list -g my-resource-group -o table
 
 # Check Azure DNS
-az network dns record-set list -g ${RESOURCE_GROUP} -z ${DNS_ZONE} -o table
+az network dns record-set list -g my-resource-group -z example.com -o table
 ```
 
 ### Azure Storage for Kubernetes
 
 ```bash
 # Check storage accounts
-az storage account list -g ${RESOURCE_GROUP} -o table
+az storage account list -g my-resource-group -o table
 
 # Check blob services
-az storage blob service-properties show --account-name ${STORAGE_ACCOUNT}
+az storage blob service-properties show --account-name mystorageaccount
 
 # Check file shares
-az storage share list --account-name ${STORAGE_ACCOUNT} -o table
+az storage share list --account-name mystorageaccount -o table
 
 # Check managed disks
-az disk list -g ${RESOURCE_GROUP} -o table
+az disk list -g my-resource-group -o table
 
 # Check Azure NetApp Files volumes
-az netappfiles volume list -g ${RESOURCE_GROUP} -a ${ACCOUNT} -o table
+az netappfiles volume list -g my-resource-group -a my-account -o table
 ```
 
 ### Azure Monitoring for ARO
 
 ```bash
 # Check Azure Monitor insights
-az monitor app-insights show -g ${RESOURCE_GROUP} -n ${APP_INSIGHTS}
+az monitor app-insights show -g my-resource-group -n my-app-insights
 
 # Check Log Analytics workspace
-az monitor log-analytics workspace list -g ${RESOURCE_GROUP} -o table
+az monitor log-analytics workspace list -g my-resource-group -o table
 
 # Check metric alerts
-az monitor metrics alert list -g ${RESOURCE_GROUP} -o table
+az monitor metrics alert list -g my-resource-group -o table
 
 # Check activity log
-az monitor activity-log list -g ${RESOURCE_GROUP} --query "[].operationName" -o table
+az monitor activity-log list -g my-resource-group --query "[].operationName" -o table
 ```
 
 ---
@@ -814,25 +814,25 @@ az monitor activity-log list -g ${RESOURCE_GROUP} --query "[].operationName" -o 
 
 ```bash
 # Describe VPC
-aws ec2 describe-vpcs --vpc-ids ${VPC_ID} --output table
+aws ec2 describe-vpcs --vpc-ids vpc-abcdef12 --output table
 
 # List subnets
-aws ec2 describe-subnets --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=vpc-abcdef12" --output table
 
 # Check route tables
-aws ec2 describe-route-tables --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+aws ec2 describe-route-tables --filters "Name=vpc-id,Values=vpc-abcdef12" --output table
 
 # Check security groups
-aws ec2 describe-security-groups --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+aws ec2 describe-security-groups --filters "Name=vpc-id,Values=vpc-abcdef12" --output table
 
 # Check NAT Gateways
-aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=${VPC_ID}" --output table
+aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=vpc-abcdef12" --output table
 
 # Check Internet Gateways
-aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=${VPC_ID}" --output table
+aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=vpc-abcdef12" --output table
 
 # Check Transit Gateway attachments
-aws ec2 describe-transit-gateway-attachments --filters "Name=vpc-id,Values=${VPC_ID}" --output table
+aws ec2 describe-transit-gateway-attachments --filters "Name=vpc-id,Values=vpc-abcdef12" --output table
 ```
 
 ### AWS IAM for ROSA
@@ -845,7 +845,7 @@ aws iam list-roles | jq '.Roles[] | select(.RoleName | startswith("rosa"))'
 aws iam list-open-id-connect-providers
 
 # Get OIDC provider details
-aws iam get-open-id-connect-provider --open-id-connect-provider-arn ${PROVIDER_ARN}
+aws iam get-open-id-connect-provider --open-id-connect-provider-arn arn:aws:iam::000000000000:oidc-provider/my-provider
 
 # Check IAM policies
 aws iam list-policies | jq '.Policies[] | select(.PolicyName | startswith("rosa"))'
@@ -862,8 +862,8 @@ aws logs describe-log-groups --log-group-name-prefix /aws/rosa/ --output table
 
 # Get cluster logs
 aws logs get-log-events \
-  --log-group-name /aws/rosa/${CLUSTER}/api \
-  --log-stream-name ${STREAM} \
+  --log-group-name /aws/rosa/my-cluster/api \
+  --log-stream-name my-stream \
   --limit 50
 
 # Check metrics
@@ -886,16 +886,16 @@ aws cloudwatch describe-alarms --alarm-name-prefix rosa-
 aws s3 ls
 
 # Check bucket policy
-aws s3api get-bucket-policy --bucket ${BUCKET} --query Policy --output json | jq '.'
+aws s3api get-bucket-policy --bucket my-bucket --query Policy --output json | jq '.'
 
 # Check bucket versioning
-aws s3api get-bucket-versioning --bucket ${BUCKET}
+aws s3api get-bucket-versioning --bucket my-bucket
 
 # Check bucket encryption
-aws s3api get-bucket-encryption --bucket ${BUCKET}
+aws s3api get-bucket-encryption --bucket my-bucket
 
 # Check bucket lifecycle
-aws s3api get-bucket-lifecycle-configuration --bucket ${BUCKET}
+aws s3api get-bucket-lifecycle-configuration --bucket my-bucket
 ```
 
 ### AWS RDS for Kubernetes
@@ -913,7 +913,7 @@ aws rds describe-db-security-groups --output table
 # Check RDS performance insights
 aws pi describe-dimension-keys \
   --service-type RDS \
-  --db-instance-identifier ${DB_INSTANCE} \
+  --db-instance-identifier my-db-instance \
   --metric-name db.load.avg
 ```
 

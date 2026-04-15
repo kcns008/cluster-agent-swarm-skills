@@ -85,13 +85,13 @@ histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
 histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))
 
 # CPU usage by pod
-rate(container_cpu_usage_seconds_total{namespace="${NAMESPACE}", pod=~"${APP}.*"}[5m])
+rate(container_cpu_usage_seconds_total{namespace="my-namespace", pod=~"my-app.*"}[5m])
 
 # Memory usage (working set)
-container_memory_working_set_bytes{namespace="${NAMESPACE}", pod=~"${APP}.*"}
+container_memory_working_set_bytes{namespace="my-namespace", pod=~"my-app.*"}
 
 # Pod restart count
-kube_pod_container_status_restarts_total{namespace="${NAMESPACE}"}
+kube_pod_container_status_restarts_total{namespace="my-namespace"}
 
 # Node CPU saturation
 100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
@@ -119,21 +119,21 @@ histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[5m]))
 
 ```bash
 # Direct query
-curl -s "http://${PROMETHEUS_URL}/api/v1/query" \
+curl -s "http://prometheus.example.com/api/v1/query" \
   --data-urlencode "query=rate(http_requests_total[5m])" | jq .
 
 # Range query
-curl -s "http://${PROMETHEUS_URL}/api/v1/query_range" \
+curl -s "http://prometheus.example.com/api/v1/query_range" \
   --data-urlencode "query=rate(http_requests_total[5m])" \
   --data-urlencode "start=$(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ)" \
   --data-urlencode "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --data-urlencode "step=60" | jq .
 
 # Check targets
-curl -s "http://${PROMETHEUS_URL}/api/v1/targets" | jq '.data.activeTargets | length'
+curl -s "http://prometheus.example.com/api/v1/targets" | jq '.data.activeTargets | length'
 
 # Alerts
-curl -s "http://${PROMETHEUS_URL}/api/v1/alerts" | jq '.data.alerts[] | {alertname: .labels.alertname, state: .state, severity: .labels.severity}'
+curl -s "http://prometheus.example.com/api/v1/alerts" | jq '.data.alerts[] | {alertname: .labels.alertname, state: .state, severity: .labels.severity}'
 
 ```
 
@@ -146,12 +146,12 @@ TOKEN=$(oc whoami -t)
 
 # Query with token auth
 curl -sk -H "Authorization: Bearer $TOKEN" \
-  "https://${PROM_URL}/api/v1/query?query=up"
+  "https://prometheus.example.com/api/v1/query?query=up"
 
 # Access Thanos Querier
 THANOS_URL=$(oc get route thanos-querier -n openshift-monitoring -o jsonpath='{.spec.host}')
 curl -sk -H "Authorization: Bearer $TOKEN" \
-  "https://${THANOS_URL}/api/v1/query?query=up"
+  "https://thanos.example.com/api/v1/query?query=up"
 
 # Check cluster monitoring operator status
 oc get clusteroperator monitoring -o json | jq '.status.conditions'
@@ -168,15 +168,15 @@ oc get prometheusrules -A
 
 ```bash
 # Query across clusters with external_labels
-curl -s "${THANOS_URL}/api/v1/query" \
+curl -s "thanos.example.com/api/v1/query" \
   --data-urlencode 'query=sum by (cluster) (rate(http_requests_total[5m]))' | jq .
 
 # Compare clusters
-curl -s "${THANOS_URL}/api/v1/query" \
+curl -s "thanos.example.com/api/v1/query" \
   --data-urlencode 'query=sum by (cluster) (kube_pod_container_status_restarts_total)' | jq .
 
 # Long-term query (Thanos Store)
-curl -s "${THANOS_URL}/api/v1/query_range" \
+curl -s "thanos.example.com/api/v1/query_range" \
   --data-urlencode 'query=avg_over_time(up{job="kubelet"}[1d])' \
   --data-urlencode "start=$(date -u -v-30d +%Y-%m-%dT%H:%M:%SZ)" \
   --data-urlencode "end=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -191,31 +191,31 @@ curl -s "${THANOS_URL}/api/v1/query_range" \
 
 ```logql
 # Application logs (Loki)
-{namespace="${NAMESPACE}", app="${APP}"} |= "error"
+{namespace="my-namespace", app="my-app"} |= "error"
 
 # JSON log parsing
-{namespace="${NAMESPACE}"} | json | level="error" | line_format "{{.message}}"
+{namespace="my-namespace"} | json | level="error" | line_format "{{.message}}"
 
 # Rate of errors
-rate({namespace="${NAMESPACE}", app="${APP}"} |= "error" [5m])
+rate({namespace="my-namespace", app="my-app"} |= "error" [5m])
 
 # Top error messages
-topk(10, sum by (message) (rate({namespace="${NAMESPACE}"} | json | level="error" [5m])))
+topk(10, sum by (message) (rate({namespace="my-namespace"} | json | level="error" [5m])))
 
 # Logs around a specific time
-{namespace="${NAMESPACE}"} |= "" | __timestamp__ >= "2026-02-11T00:00:00Z" | __timestamp__ <= "2026-02-11T00:10:00Z"
+{namespace="my-namespace"} |= "" | __timestamp__ >= "2026-02-11T00:00:00Z" | __timestamp__ <= "2026-02-11T00:10:00Z"
 ```
 
 ### Querying Loki API
 
 ```bash
 # Query Loki
-curl -s "http://${LOKI_URL}/loki/api/v1/query" \
+curl -s "http://loki.example.com/loki/api/v1/query" \
   --data-urlencode 'query={namespace="production",app="payment-service"} |= "error"' \
   --data-urlencode "limit=100" | jq .
 
 # Range query
-curl -s "http://${LOKI_URL}/loki/api/v1/query_range" \
+curl -s "http://loki.example.com/loki/api/v1/query_range" \
   --data-urlencode 'query=rate({namespace="production"} |= "error" [5m])' \
   --data-urlencode "start=$(date -u -v-1H +%s)000000000" \
   --data-urlencode "end=$(date -u +%s)000000000" \
@@ -235,7 +235,7 @@ oc get clusterlogforwarder instance -n openshift-logging -o yaml
 # Access Elasticsearch (if used)
 ES_ROUTE=$(oc get route elasticsearch -n openshift-logging -o jsonpath='{.spec.host}')
 TOKEN=$(oc whoami -t)
-curl -sk -H "Authorization: Bearer $TOKEN" "https://${ES_ROUTE}/_cat/indices?v"
+curl -sk -H "Authorization: Bearer $TOKEN" "https://elasticsearch.example.com/_cat/indices?v"
 ```
 
 ---
@@ -246,23 +246,23 @@ curl -sk -H "Authorization: Bearer $TOKEN" "https://${ES_ROUTE}/_cat/indices?v"
 
 ```bash
 # Search dashboards
-curl -s -H "Authorization: Bearer ${GRAFANA_TOKEN}" \
-  "${GRAFANA_URL}/api/search?type=dash-db" | jq '.[].title'
+curl -s -H "Authorization: Bearer GRAFANA_TOKEN" \
+  "grafana.example.com/api/search?type=dash-db" | jq '.[].title'
 
 # Get dashboard by UID
-curl -s -H "Authorization: Bearer ${GRAFANA_TOKEN}" \
-  "${GRAFANA_URL}/api/dashboards/uid/${DASHBOARD_UID}" | jq .
+curl -s -H "Authorization: Bearer GRAFANA_TOKEN" \
+  "grafana.example.com/api/dashboards/uid/my-dashboard" | jq .
 
 # Create/update dashboard
 curl -s -X POST \
-  -H "Authorization: Bearer ${GRAFANA_TOKEN}" \
+  -H "Authorization: Bearer GRAFANA_TOKEN" \
   -H "Content-Type: application/json" \
   -d @dashboard.json \
-  "${GRAFANA_URL}/api/dashboards/db"
+  "grafana.example.com/api/dashboards/db"
 
 # List data sources
-curl -s -H "Authorization: Bearer ${GRAFANA_TOKEN}" \
-  "${GRAFANA_URL}/api/datasources" | jq '.[].name'
+curl -s -H "Authorization: Bearer GRAFANA_TOKEN" \
+  "grafana.example.com/api/datasources" | jq '.[].name'
 ```
 
 ### Standard Dashboard Templates
@@ -302,17 +302,17 @@ Alert fires → Acknowledge → Classify → Investigate → Resolve/Escalate �
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
-  name: ${APP_NAME}-alerts
-  namespace: ${NAMESPACE}
+  name: my-app-alerts
+  namespace: my-namespace
 spec:
   groups:
-    - name: ${APP_NAME}.rules
+    - name: my-app.rules
       rules:
         # High error rate
         - alert: HighErrorRate
           expr: |
-            rate(http_requests_total{service="${APP_NAME}", status=~"5.."}[5m])
-            / rate(http_requests_total{service="${APP_NAME}"}[5m]) > 0.05
+            rate(http_requests_total{service="my-app", status=~"5.."}[5m])
+            / rate(http_requests_total{service="my-app"}[5m]) > 0.05
           for: 5m
           labels:
             severity: critical
@@ -323,7 +323,7 @@ spec:
         # High latency
         - alert: HighLatency
           expr: |
-            histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service="${APP_NAME}"}[5m])) > 1
+            histogram_quantile(0.99, rate(http_request_duration_seconds_bucket{service="my-app"}[5m])) > 1
           for: 5m
           labels:
             severity: warning
@@ -333,7 +333,7 @@ spec:
         # Pod restarts
         - alert: FrequentPodRestarts
           expr: |
-            increase(kube_pod_container_status_restarts_total{namespace="${NAMESPACE}"}[1h]) > 5
+            increase(kube_pod_container_status_restarts_total{namespace="my-namespace"}[1h]) > 5
           labels:
             severity: warning
           annotations:
@@ -342,8 +342,8 @@ spec:
         # Memory near limit
         - alert: MemoryNearLimit
           expr: |
-            container_memory_working_set_bytes{namespace="${NAMESPACE}"}
-            / kube_pod_container_resource_limits{resource="memory", namespace="${NAMESPACE}"} > 0.85
+            container_memory_working_set_bytes{namespace="my-namespace"}
+            / kube_pod_container_resource_limits{resource="memory", namespace="my-namespace"} > 0.85
           for: 10m
           labels:
             severity: warning
@@ -358,7 +358,7 @@ kubectl get prometheusrules -A
 # Check currently firing alerts
 
 # Silence an alert (via Alertmanager API)
-curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
+curl -s -X POST "alertmanager.example.com/api/v2/silences" \
   -H "Content-Type: application/json" \
   -d '{
     "matchers": [{"name": "alertname", "value": "HighLatency", "isRegex": false}],
@@ -380,24 +380,24 @@ curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
 - name: availability
   query: |
     1 - (
-      sum(rate(http_requests_total{service="${SERVICE}", status=~"5.."}[${WINDOW}]))
+      sum(rate(http_requests_total{service="my-service", status=~"5.."}[5m]))
       /
-      sum(rate(http_requests_total{service="${SERVICE}"}[${WINDOW}]))
+      sum(rate(http_requests_total{service="my-service"}[5m]))
     )
   target: 0.999  # 99.9%
 
 # Latency SLI
 - name: latency
   query: |
-    sum(rate(http_request_duration_seconds_bucket{service="${SERVICE}", le="0.3"}[${WINDOW}]))
+    sum(rate(http_request_duration_seconds_bucket{service="my-service", le="0.3"}[5m]))
     /
-    sum(rate(http_request_duration_seconds_count{service="${SERVICE}"}[${WINDOW}]))
+    sum(rate(http_request_duration_seconds_count{service="my-service"}[5m]))
   target: 0.99  # 99% of requests under 300ms
 
 # Throughput SLI  
 - name: throughput
   query: |
-    sum(rate(http_requests_total{service="${SERVICE}"}[${WINDOW}]))
+    sum(rate(http_requests_total{service="my-service"}[5m]))
   target: 100  # Minimum 100 req/s
 ```
 
@@ -407,8 +407,8 @@ curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
 # Error budget remaining (30-day window)
 1 - (
   (1 - (
-    sum(rate(http_requests_total{service="${SERVICE}", status!~"5.."}[30d]))
-    / sum(rate(http_requests_total{service="${SERVICE}"}[30d]))
+    sum(rate(http_requests_total{service="my-service", status!~"5.."}[30d]))
+    / sum(rate(http_requests_total{service="my-service"}[30d]))
   ))
   / (1 - 0.999)  # SLO target
 )
@@ -416,8 +416,8 @@ curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
 # Burn rate (how fast are we consuming budget?)
 (
   1 - (
-    sum(rate(http_requests_total{service="${SERVICE}", status!~"5.."}[1h]))
-    / sum(rate(http_requests_total{service="${SERVICE}"}[1h]))
+    sum(rate(http_requests_total{service="my-service", status!~"5.."}[1h]))
+    / sum(rate(http_requests_total{service="my-service"}[1h]))
   )
 ) / (1 - 0.999)
 ```
@@ -447,26 +447,26 @@ curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
 
 ```bash
 # Application health
-kubectl get pods -n ${NAMESPACE} -l app=${APP}
-kubectl top pods -n ${NAMESPACE} -l app=${APP}
+kubectl get pods -n my-namespace -l app=my-app
+kubectl top pods -n my-namespace -l app=my-app
 
 # Recent events
-kubectl get events -n ${NAMESPACE} --sort-by='.lastTimestamp' | tail -20
+kubectl get events -n my-namespace --sort-by='.lastTimestamp' | tail -20
 
 # Container logs (last 30 min)
-kubectl logs -n ${NAMESPACE} -l app=${APP} --since=30m --tail=200
+kubectl logs -n my-namespace -l app=my-app --since=30m --tail=200
 
 # Previous container logs (after crash)
-kubectl logs -n ${NAMESPACE} ${POD} --previous
+kubectl logs -n my-namespace my-pod --previous
 
 # Deployment status
-kubectl rollout status deployment/${APP} -n ${NAMESPACE}
+kubectl rollout status deployment/my-app -n my-namespace
 
 # Resource usage vs limits
-kubectl describe pod ${POD} -n ${NAMESPACE} | grep -A 5 "Limits\|Requests"
+kubectl describe pod my-pod -n my-namespace | grep -A 5 "Limits\|Requests"
 
 # Network connectivity
-kubectl exec -n ${NAMESPACE} ${POD} -- curl -s -o /dev/null -w "%{http_code}" http://${TARGET_SERVICE}:${PORT}/health
+kubectl exec -n my-namespace my-pod -- curl -s -o /dev/null -w "%{http_code}" http://target-service:8080/health
 ```
 
 ### Generate Incident Report
@@ -531,16 +531,16 @@ kubectl exec -n ${NAMESPACE} ${POD} -- curl -s -o /dev/null -w "%{http_code}" ht
 
 ```bash
 # Get Azure Monitor metrics via REST API
-curl -s -H "Authorization: Bearer ${AZURE_TOKEN}" \
-  "https://management.azure.com/subscriptions/${SUB_ID}/resourceGroups/${RG}/providers/Microsoft.ContainerService/managedClusters/${CLUSTER}/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=node_cpu_usage_millicores,node_memory_rss_bytes" | jq .
+curl -s -H "Authorization: Bearer AZURE_ACCESS_TOKEN" \
+  "https://management.azure.com/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/my-resource-group/providers/Microsoft.ContainerService/managedClusters/my-cluster/providers/Microsoft.Insights/metrics?api-version=2023-10-01&metricnames=node_cpu_usage_millicores,node_memory_rss_bytes" | jq .
 
 # List metric definitions
 az monitor metrics list-definitions \
-  --resource /subscriptions/${SUB_ID}/resourcegroups/${RG}/providers/microsoft.containerservice/managedclusters/${CLUSTER}
+  --resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/my-resource-group/providers/microsoft.containerservice/managedclusters/my-cluster
 
 # Query metrics
 az monitor metrics query \
-  --resource /subscriptions/${SUB_ID}/resourcegroups/${RG}/providers/microsoft.containerservice/managedclusters/${CLUSTER} \
+  --resource /subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/my-resource-group/providers/microsoft.containerservice/managedclusters/my-cluster \
   --namespace "Insights.container/nodes" \
   --metric-names "cpuExceeded,memoryExceeded" \
   --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
@@ -552,27 +552,27 @@ az monitor metrics query \
 
 ```bash
 # Query Container Insights logs
-az monitor app-insights show -g ${RG} -n ${APP_INSIGHTS} 2>/dev/null || true
+az monitor app-insights show -g my-resource-group -n my-app-insights 2>/dev/null || true
 
 # Query Log Analytics workspace
 az monitor log-analytics query \
-  --workspace ${WORKSPACE_ID} \
+  --workspace 00000000-0000-0000-0000-000000000000 \
   --analytics-query "ContainerInventory | where TimeGenerated > ago(1h)"
 
 # Get cluster events
 az monitor log-analytics query \
-  --workspace ${WORKSPACE_ID} \
-  --analytics-query "KubeEvents | where TimeGenerated > ago(1h) | where ClusterId == '${CLUSTER}'"
+  --workspace 00000000-0000-0000-0000-000000000000 \
+  --analytics-query "KubeEvents | where TimeGenerated > ago(1h) | where ClusterId == 'my-cluster'"
 
 # Get container logs
 az monitor log-analytics query \
-  --workspace ${WORKSPACE_ID} \
-  --analytics-query "ContainerLog | where TimeGenerated > ago(1h) | where ContainerName == '${CONTAINER}' | limit 100"
+  --workspace 00000000-0000-0000-0000-000000000000 \
+  --analytics-query "ContainerLog | where TimeGenerated > ago(1h) | where ContainerName == 'my-container' | limit 100"
 
 # Get pod status
 az monitor log-analytics query \
-  --workspace ${WORKSPACE_ID} \
-  --analytics-query "KubePodInventory | where TimeGenerated > ago(1h) | where ClusterId == '${CLUSTER}' | summarize count() by PodStatus"
+  --workspace 00000000-0000-0000-0000-000000000000 \
+  --analytics-query "KubePodInventory | where TimeGenerated > ago(1h) | where ClusterId == 'my-cluster' | summarize count() by PodStatus"
 ```
 
 ### Azure Container Insights
@@ -580,22 +580,22 @@ az monitor log-analytics query \
 ```bash
 # Enable Container Insights
 az monitor app-insights component create \
-  --app ${APP_INSIGHTS} \
-  --location ${LOCATION} \
-  --resource-group ${RG}
+  --app my-app-insights \
+  --location eastus \
+  --resource-group my-resource-group
 
 # Check Container Insights status
 az containerinsight show \
-  --resource-group ${RG} \
-  --cluster-name ${CLUSTER}
+  --resource-group my-resource-group \
+  --cluster-name my-cluster
 
 # Get recommended alerts
-az monitor metrics alert list -g ${RG} -o table
+az monitor metrics alert list -g my-resource-group -o table
 
 # Create metric alert
 az monitor metrics alert create \
   -n "high-cpu-alert" \
-  -g ${RG} \
+  -g my-resource-group \
   --condition "avg CPU > 80" \
   --description "CPU usage exceeded 80%"
 ```
@@ -620,7 +620,7 @@ aws cloudwatch get-metric-statistics \
 aws cloudwatch get-metric-statistics \
   --namespace AWS/ContainerInsights \
   --metric-name node_cpu_utilization \
-  --dimensions "Name=ClusterName,Value=${CLUSTER};Name=NodeName,Value=${NODE}" \
+  --dimensions "Name=ClusterName,Value=my-cluster;Name=NodeName,Value=my-node" \
   --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 300 \
@@ -630,7 +630,7 @@ aws cloudwatch get-metric-statistics \
 aws cloudwatch get-metric-statistics \
   --namespace AWS/ContainerInsights \
   --metric-name pod_cpu_utilization \
-  --dimensions "Name=ClusterName,Value=${CLUSTER};Name=Namespace,Value=${NAMESPACE};Name=PodName,Value=${POD}" \
+  --dimensions "Name=ClusterName,Value=my-cluster;Name=Namespace,Value=my-namespace;Name=PodName,Value=my-pod" \
   --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 300 \
@@ -640,7 +640,7 @@ aws cloudwatch get-metric-statistics \
 aws cloudwatch get-metric-statistics \
   --namespace AWS/AppMesh \
   --metric-name request_count \
-  --dimensions "Name=mesh,Value=${MESH};Name=virtualNode,Value=${NODE}" \
+  --dimensions "Name=mesh,Value=istio-system;Name=virtualNode,Value=my-node" \
   --start-time $(date -u -v-1H +%Y-%m-%dT%H:%M:%SZ) \
   --end-time $(date -u +%Y-%m-%dT%H:%M:%SZ) \
   --period 60 \
@@ -655,21 +655,21 @@ aws logs describe-log-groups --log-group-name-prefix /aws/rosa/ --output table
 
 # Get cluster logs
 aws logs get-log-events \
-  --log-group-name /aws/rosa/${CLUSTER}/api \
+  --log-group-name /aws/rosa/my-cluster/api \
   --log-stream-name kube-apiserver-audit \
   --limit 50
 
 # Query logs with filter pattern
 aws logs filter-log-events \
-  --log-group-name /aws/rosa/${CLUSTER}/containers \
+  --log-group-name /aws/rosa/my-cluster/containers \
   --filter-pattern "[timestamp, level, message]" \
   --start-time $(date -u -v-1H +%s)000 \
   --end-time $(date -u +%s)000
 
 # Get container runtime logs
 aws logs get-log-events \
-  --log-group-name /aws/rosa/${CLUSTER}/runtime \
-  --log-stream-name kubelet/${NODE} \
+  --log-group-name /aws/rosa/my-cluster/runtime \
+  --log-stream-name kubelet/my-node \
   --limit 100
 ```
 
@@ -681,7 +681,7 @@ aws cloudwatch describe-alarms --alarm-name-prefix rosa-
 
 # Create CPU alarm
 aws cloudwatch put-metric-alarm \
-  --alarm-name "rosa-${CLUSTER}-high-cpu" \
+  --alarm-name "rosa-my-cluster-high-cpu" \
   --alarm-description "CPU usage exceeded 80%" \
   --metric-name node_cpu_utilization \
   --namespace AWS/ContainerInsights \
@@ -689,13 +689,13 @@ aws cloudwatch put-metric-alarm \
   --period 300 \
   --threshold 80 \
   --comparison-operator GreaterThanThreshold \
-  --dimensions "Name=ClusterName,Value=${CLUSTER}" \
+  --dimensions "Name=ClusterName,Value=my-cluster" \
   --evaluation-periods 2 \
-  --alarm-actions ${SNS_ARN}
+  --alarm-actions arn:aws:sns:us-east-1:000000000000:my-topic
 
 # Create memory alarm
 aws cloudwatch put-metric-alarm \
-  --alarm-name "rosa-${CLUSTER}-high-memory" \
+  --alarm-name "rosa-my-cluster-high-memory" \
   --alarm-description "Memory usage exceeded 85%" \
   --metric-name node_memory_utilization \
   --namespace AWS/ContainerInsights \
@@ -703,7 +703,7 @@ aws cloudwatch put-metric-alarm \
   --period 300 \
   --threshold 85 \
   --comparison-operator GreaterThanThreshold \
-  --dimensions "Name=ClusterName,Value=${CLUSTER}" \
+  --dimensions "Name=ClusterName,Value=my-cluster" \
   --evaluation-periods 2
 ```
 
@@ -720,11 +720,11 @@ aws xray get-trace-summaries \
 aws xray get-service-graph \
   --start-time $(date -u -v-1H +%s) \
   --end-time $(date -u +%s) \
-  --graph-name ${CLUSTER}
+  --graph-name my-cluster
 
 # Get trace segment
 aws xray get-trace-segment \
-  --trace-id ${TRACE_ID}
+  --trace-id 00000000000000000000000000000000
 ```
 
 ---

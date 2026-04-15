@@ -86,14 +86,14 @@ You are meticulous about provenance (where it came from) and immutability (it do
 oc get clusteroperator image-registry -o json | jq '.status.conditions'
 
 # List image streams (OpenShift)
-oc get imagestreams -n ${NAMESPACE}
-oc describe imagestream ${APP} -n ${NAMESPACE}
+oc get imagestreams -n my-namespace
+oc describe imagestream my-app -n my-namespace
 
 # Tag image
-oc tag ${SOURCE_NS}/${APP}:${TAG} ${TARGET_NS}/${APP}:${TAG}
+oc tag source-namespace/my-app:v1.0.0 target-namespace/my-app:v1.0.0
 
 # Import external image
-oc import-image ${APP}:${TAG} --from=${EXTERNAL_REGISTRY}/${APP}:${TAG} --confirm -n ${NAMESPACE}
+oc import-image my-app:v1.0.0 --from=external-registry.example.com/my-app:v1.0.0 --confirm -n my-namespace
 
 # Prune old images
 oc adm prune images --keep-tag-revisions=3 --keep-younger-than=168h --confirm
@@ -109,107 +109,107 @@ oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}
 jfrog rt repo-list
 
 # Search artifacts
-jfrog rt search "docker-local/${APP}/${TAG}/"
+jfrog rt search "docker-local/my-app/v1.0.0/"
 
 # Copy (promote) artifact
 jfrog rt copy \
-  "dev-docker-local/${APP}/${TAG}/" \
-  "prod-docker-local/${APP}/${TAG}/" \
+  "dev-docker-local/my-app/v1.0.0/" \
+  "prod-docker-local/my-app/v1.0.0/" \
   --flat=false
 
 # Set properties (metadata)
 jfrog rt set-props \
-  "docker-local/${APP}/${TAG}/" \
-  "build.name=${BUILD_NAME};build.number=${BUILD_NUM};promoted=true;promoted-by=cache-agent"
+  "docker-local/my-app/v1.0.0/" \
+  "build.name=my-build;build.number=1;promoted=true;promoted-by=cache-agent"
 
 # Delete artifact
-jfrog rt delete "docker-local/${APP}/old-tag/"
+jfrog rt delete "docker-local/my-app/old-tag/"
 
 # Storage info
 jfrog rt storage-info
 
 # Repository configuration
-curl -s -u "${ARTIFACTORY_USER}:${ARTIFACTORY_TOKEN}" \
-  "${ARTIFACTORY_URL}/api/repositories" | jq '.[].key'
+curl -s -u "ARTIFACTORY_USER:ARTIFACTORY_TOKEN" \
+  "artifactory.example.com/api/repositories" | jq '.[].key'
 ```
 
 ### Harbor Registry
 
 ```bash
 # List projects
-curl -s -u "${HARBOR_USER}:${HARBOR_PASS}" \
-  "${HARBOR_URL}/api/v2.0/projects" | jq '.[].name'
+curl -s -u "HARBOR_USER:HARBOR_PASSWORD" \
+  "harbor.example.com/api/v2.0/projects" | jq '.[].name'
 
 # List repositories
-curl -s -u "${HARBOR_USER}:${HARBOR_PASS}" \
-  "${HARBOR_URL}/api/v2.0/projects/${PROJECT}/repositories" | jq '.[].name'
+curl -s -u "HARBOR_USER:HARBOR_PASSWORD" \
+  "harbor.example.com/api/v2.0/projects/my-project/repositories" | jq '.[].name'
 
 # Get artifact info
-curl -s -u "${HARBOR_USER}:${HARBOR_PASS}" \
-  "${HARBOR_URL}/api/v2.0/projects/${PROJECT}/repositories/${APP}/artifacts/${TAG}" | jq .
+curl -s -u "HARBOR_USER:HARBOR_PASSWORD" \
+  "harbor.example.com/api/v2.0/projects/my-project/repositories/my-app/artifacts/v1.0.0" | jq .
 ```
 
 ### Generic Registry (crane/skopeo)
 
 ```bash
 # List tags
-crane ls ${REGISTRY}/${APP}
+crane ls registry.example.com/my-app
 
 # Get image digest
-crane digest ${REGISTRY}/${APP}:${TAG}
+crane digest registry.example.com/my-app:v1.0.0
 
 # Copy image between registries
-crane copy ${SRC_REGISTRY}/${APP}:${TAG} ${DST_REGISTRY}/${APP}:${TAG}
-skopeo copy docker://${SRC_REGISTRY}/${APP}:${TAG} docker://${DST_REGISTRY}/${APP}:${TAG}
+crane copy source-registry.example.com/my-app:v1.0.0 destination-registry.example.com/my-app:v1.0.0
+skopeo copy docker://source-registry.example.com/my-app:v1.0.0 docker://destination-registry.example.com/my-app:v1.0.0
 
 # Inspect image
-crane manifest ${REGISTRY}/${APP}:${TAG} | jq .
-skopeo inspect docker://${REGISTRY}/${APP}:${TAG} | jq .
+crane manifest registry.example.com/my-app:v1.0.0 | jq .
+skopeo inspect docker://registry.example.com/my-app:v1.0.0 | jq .
 
 # Get image layers
-crane config ${REGISTRY}/${APP}:${TAG} | jq .
+crane config registry.example.com/my-app:v1.0.0 | jq .
 ```
 
 ### Azure Container Registry (ACR)
 
 ```bash
 # List ACR instances
-az acr list -g ${RESOURCE_GROUP} -o table
+az acr list -g my-resource-group -o table
 
 # Get login server
-az acr show -n ${ACR_NAME} --query loginServer
+az acr show -n myregistry.azurecr.io --query loginServer
 
 # Login to ACR
-az acr login -n ${ACR_NAME}
+az acr login -n myregistry.azurecr.io
 
 # List repositories
-az acr repository list -n ${ACR_NAME} -o table
+az acr repository list -n myregistry.azurecr.io -o table
 
 # List tags for an image
-az acr repository show-tags -n ${ACR_NAME} --repository ${APP}
+az acr repository show-tags -n myregistry.azurecr.io --repository my-app
 
 # Build and push image directly
-az acr build -t ${ACR_NAME}.azurecr.io/${APP}:${TAG} -f Dockerfile .
+az acr build -t myregistry.azurecr.io.azurecr.io/my-app:v1.0.0 -f Dockerfile .
 
 # Import image from another registry
 az acr import \
-  -n ${ACR_NAME} \
-  --source ${EXTERNAL_REGISTRY}/${APP}:${TAG} \
-  --image ${APP}:${TAG}
+  -n myregistry.azurecr.io \
+  --source external-registry.example.com/my-app:v1.0.0 \
+  --image my-app:v1.0.0
 
 # Delete image
-az acr repository delete -n ${ACR_NAME} --image ${APP}:${TAG}
+az acr repository delete -n myregistry.azurecr.io --image my-app:v1.0.0
 
 # Get credentials
-az acr credential show -n ${ACR_NAME}
+az acr credential show -n myregistry.azurecr.io
 
 # Enable admin user
-az acr update -n ${ACR_NAME} --admin-enabled true
+az acr update -n myregistry.azurecr.io --admin-enabled true
 
 # Configure webhook
 az acr webhook add \
-  -n ${ACR_NAME} \
-  --uri ${WEBHOOK_URL} \
+  -n myregistry.azurecr.io \
+  --uri https://webhook.example.com/hook \
   --actions push delete
 ```
 
@@ -218,7 +218,7 @@ az acr webhook add \
 ```bash
 # Create ECR repository
 aws ecr create-repository \
-  --repository-name ${APP} \
+  --repository-name my-app \
   --image-tag-mutability MUTABLE \
   --encryption-configuration encryptionType=kms
 
@@ -226,37 +226,37 @@ aws ecr create-repository \
 aws ecr describe-repositories --output table
 
 # Get authorization token
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin my-account.dkr.ecr.us-east-1.amazonaws.com
 
 # Tag and push image
-docker tag ${APP}:${TAG} ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com/${APP}:${TAG}
-docker push ${ACCOUNT}.dkr.ecr.us-east-1.amazonaws.com/${APP}:${TAG}
+docker tag my-app:v1.0.0 my-account.dkr.ecr.us-east-1.amazonaws.com/my-app:v1.0.0
+docker push my-account.dkr.ecr.us-east-1.amazonaws.com/my-app:v1.0.0
 
 # List images
-aws ecr list-images --repository-name ${APP} --output table
+aws ecr list-images --repository-name my-app --output table
 
 # Delete image
 aws ecr batch-delete-image \
-  --repository-name ${APP} \
-  --image-ids imageTag=${TAG}
+  --repository-name my-app \
+  --image-ids imageTag=v1.0.0
 
 # Describe image scan findings
 aws ecr describe-image-scan-findings \
-  --repository-name ${APP} \
-  --image-tag ${TAG}
+  --repository-name my-app \
+  --image-tag v1.0.0
 
 # Start image scan
 aws ecr start-image-scan \
-  --repository-name ${APP} \
-  --image-tag ${TAG}
+  --repository-name my-app \
+  --image-tag v1.0.0
 
 # Set lifecycle policy
 aws ecr put-lifecycle-policy \
-  --repository-name ${APP} \
+  --repository-name my-app \
   --lifecycle-policy-text file://lifecycle-policy.json
 
 # Get repository policy
-aws ecr get-repository-policy --repository-name ${APP}
+aws ecr get-repository-policy --repository-name my-app
 ```
 
 ---
@@ -290,34 +290,34 @@ Before promoting an artifact to the next environment:
 
 # Manual promotion via JFrog
 jfrog rt copy \
-  "dev-docker/${APP}/${TAG}/" \
-  "staging-docker/${APP}/${TAG}/" \
+  "dev-docker/my-app/v1.0.0/" \
+  "staging-docker/my-app/v1.0.0/" \
   --flat=false
 
 # Manual promotion via crane
 crane copy \
-  dev-registry.example.com/${APP}:${TAG} \
-  staging-registry.example.com/${APP}:${TAG}
+  dev-registry.example.com/my-app:v1.0.0 \
+  staging-registry.example.com/my-app:v1.0.0
 
 # Manual promotion via skopeo
 skopeo copy \
-  docker://dev-registry.example.com/${APP}:${TAG} \
-  docker://staging-registry.example.com/${APP}:${TAG}
+  docker://dev-registry.example.com/my-app:v1.0.0 \
+  docker://staging-registry.example.com/my-app:v1.0.0
 
 # ACR: Copy image between ACR registries
 az acr import \
-  -n ${DEST_ACR} \
-  --source ${SOURCE_ACR}.azurecr.io/${APP}:${TAG} \
-  --image ${APP}:${TAG}
+  -n destination.azurecr.io \
+  --source source.azurecr.io.azurecr.io/my-app:v1.0.0 \
+  --image my-app:v1.0.0
 
 # ECR: Copy image between ECR repositories
 aws ecr batch-delete-image \
-  --repository-name ${SRC_REPO} \
-  --image-ids imageTag=${TAG}
+  --repository-name source-repo \
+  --image-ids imageTag=v1.0.0
 
 crane copy \
-  ${SRC_ACCOUNT}.dkr.ecr.${SRC_REGION}.amazonaws.com/${APP}:${TAG} \
-  ${DST_ACCOUNT}.dkr.ecr.${DST_REGION}.amazonaws.com/${APP}:${TAG}
+  source-account.dkr.ecr.us-east-1.amazonaws.com/my-app:v1.0.0 \
+  destination-account.dkr.ecr.us-west-2.amazonaws.com/my-app:v1.0.0
 ```
 
 ---
@@ -329,17 +329,17 @@ crane copy \
 ```bash
 
 # Direct Trivy scan
-trivy image --severity CRITICAL,HIGH ${REGISTRY}/${APP}:${TAG}
-trivy image --format json ${REGISTRY}/${APP}:${TAG}
-trivy image --format sarif ${REGISTRY}/${APP}:${TAG}
+trivy image --severity CRITICAL,HIGH registry.example.com/my-app:v1.0.0
+trivy image --format json registry.example.com/my-app:v1.0.0
+trivy image --format sarif registry.example.com/my-app:v1.0.0
 
 # Trivy with exit code (for CI gates)
-trivy image --exit-code 1 --severity CRITICAL ${REGISTRY}/${APP}:${TAG}
+trivy image --exit-code 1 --severity CRITICAL registry.example.com/my-app:v1.0.0
 
 # Grype scan
-grype ${REGISTRY}/${APP}:${TAG}
-grype ${REGISTRY}/${APP}:${TAG} -o json
-grype ${REGISTRY}/${APP}:${TAG} --only-fixed  # Only show fixable CVEs
+grype registry.example.com/my-app:v1.0.0
+grype registry.example.com/my-app:v1.0.0 -o json
+grype registry.example.com/my-app:v1.0.0 --only-fixed  # Only show fixable CVEs
 
 # Scan from SBOM
 trivy sbom sbom.json
@@ -355,16 +355,16 @@ grype dir:.
 ```bash
 # Scan image in ACR
 az acr scan \
-  --name ${ACR} \
-  --image ${APP}:${TAG}
+  --name myregistry.azurecr.io \
+  --image my-app:v1.0.0
 
 # Get scan results
 az acr show-scan-reports \
-  --name ${ACR} \
-  --image ${APP}:${TAG}
+  --name myregistry.azurecr.io \
+  --image my-app:v1.0.0
 
 # Enable scanning policy
-az acr update -n ${ACR} --enable-scan
+az acr update -n myregistry.azurecr.io --enable-scan
 ```
 
 ### Amazon ECR Scanning
@@ -372,17 +372,17 @@ az acr update -n ${ACR} --enable-scan
 ```bash
 # Start image scan
 aws ecr start-image-scan \
-  --repository-name ${APP} \
-  --image-tag ${TAG}
+  --repository-name my-app \
+  --image-tag v1.0.0
 
 # Get scan findings
 aws ecr describe-image-scan-findings \
-  --repository-name ${APP} \
-  --image-tag ${TAG} | jq '.imageScanFindings'
+  --repository-name my-app \
+  --image-tag v1.0.0 | jq '.imageScanFindings'
 
 # Enable enhanced scanning
 aws ecr put-image-scanning-configuration \
-  --repository-name ${APP} \
+  --repository-name my-app \
   --imageScanningConfiguration scanOnPush=true
 
 # Enable continuous scanning
@@ -419,34 +419,34 @@ scan_policy:
 ```bash
 
 # Syft SBOM generation
-syft ${REGISTRY}/${APP}:${TAG} -o spdx-json > sbom-spdx.json
-syft ${REGISTRY}/${APP}:${TAG} -o cyclonedx-json > sbom-cdx.json
-syft ${REGISTRY}/${APP}:${TAG} -o syft-json > sbom-syft.json
+syft registry.example.com/my-app:v1.0.0 -o spdx-json > sbom-spdx.json
+syft registry.example.com/my-app:v1.0.0 -o cyclonedx-json > sbom-cdx.json
+syft registry.example.com/my-app:v1.0.0 -o syft-json > sbom-syft.json
 
 # Trivy SBOM generation
-trivy image --format spdx-json ${REGISTRY}/${APP}:${TAG} > sbom-trivy.json
+trivy image --format spdx-json registry.example.com/my-app:v1.0.0 > sbom-trivy.json
 
 # Attach SBOM to image (Cosign)
-cosign attach sbom --sbom sbom-spdx.json ${REGISTRY}/${APP}:${TAG}
+cosign attach sbom --sbom sbom-spdx.json registry.example.com/my-app:v1.0.0
 
 # Verify attached SBOM
-cosign verify-attestation ${REGISTRY}/${APP}:${TAG}
+cosign verify-attestation registry.example.com/my-app:v1.0.0
 ```
 
 ### ACR and ECR SBOM Generation
 
 ```bash
 # Generate SBOM from ACR image
-syft ${ACR_NAME}.azurecr.io/${APP}:${TAG} -o spdx-json > sbom-acr.json
+syft myregistry.azurecr.io.azurecr.io/my-app:v1.0.0 -o spdx-json > sbom-acr.json
 
 # Generate SBOM from ECR image
-syft ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${APP}:${TAG} -o spdx-json > sbom-ecr.json
+syft my-account.dkr.ecr.us-east-1.amazonaws.com/my-app:v1.0.0 -o spdx-json > sbom-ecr.json
 
 # Attach SBOM to ACR image
-cosign attach sbom --sbom sbom-acr.json ${ACR_NAME}.azurecr.io/${APP}:${TAG}
+cosign attach sbom --sbom sbom-acr.json myregistry.azurecr.io.azurecr.io/my-app:v1.0.0
 
 # Attach SBOM to ECR image
-cosign attach sbom --sbom sbom-ecr.json ${ACCOUNT}.dkr.ecr.${REGION}.amazonaws.com/${APP}:${TAG}
+cosign attach sbom --sbom sbom-ecr.json my-account.dkr.ecr.us-east-1.amazonaws.com/my-app:v1.0.0
 ```
 
 ### SBOM Analysis
@@ -476,25 +476,25 @@ trivy sbom sbom-spdx.json --severity CRITICAL,HIGH
 cosign generate-key-pair
 
 # Sign image with key
-cosign sign --key cosign.key ${REGISTRY}/${APP}:${TAG}
+cosign sign --key cosign.key registry.example.com/my-app:v1.0.0
 
 # Sign image with keyless (Fulcio/Rekor/Sigstore)
-COSIGN_EXPERIMENTAL=1 cosign sign ${REGISTRY}/${APP}:${TAG}
+COSIGN_EXPERIMENTAL=1 cosign sign registry.example.com/my-app:v1.0.0
 
 # Verify signature (key-based)
-cosign verify --key cosign.pub ${REGISTRY}/${APP}:${TAG}
+cosign verify --key cosign.pub registry.example.com/my-app:v1.0.0
 
 # Verify signature (keyless)
 cosign verify \
-  --certificate-identity ${SIGNER_EMAIL} \
-  --certificate-oidc-issuer ${OIDC_ISSUER} \
-  ${REGISTRY}/${APP}:${TAG}
+  --certificate-identity signer@example.com \
+  --certificate-oidc-issuer https://oidc.example.com \
+  registry.example.com/my-app:v1.0.0
 
 # Add attestation (SLSA provenance)
-cosign attest --predicate provenance.json --key cosign.key ${REGISTRY}/${APP}:${TAG}
+cosign attest --predicate provenance.json --key cosign.key registry.example.com/my-app:v1.0.0
 
 # Verify attestation
-cosign verify-attestation --key cosign.pub ${REGISTRY}/${APP}:${TAG}
+cosign verify-attestation --key cosign.pub registry.example.com/my-app:v1.0.0
 ```
 
 ---
@@ -525,7 +525,7 @@ retention_policy:
 ```bash
 
 # JFrog cleanup
-jfrog rt delete "dev-docker-local/${APP}/" \
+jfrog rt delete "dev-docker-local/my-app/" \
   --props "build.timestamp<$(date -u -v-30d +%Y-%m-%dT%H:%M:%SZ)" \
   --quiet
 
@@ -533,14 +533,14 @@ jfrog rt delete "dev-docker-local/${APP}/" \
 oc adm prune images --keep-tag-revisions=3 --keep-younger-than=720h --confirm
 
 # Crane-based cleanup (list old tags)
-crane ls ${REGISTRY}/${APP} | while read TAG; do
-  CREATED=$(crane config ${REGISTRY}/${APP}:${TAG} | jq -r '.created')
+crane ls registry.example.com/my-app | while read TAG; do
+  CREATED=$(crane config registry.example.com/my-app:v1.0.0 | jq -r '.created')
   echo "$TAG created: $CREATED"
 done
 
 # ACR cleanup: Delete old images by tag age
-az acr run --registry ${ACR} \
-  --cmd "az acr repository delete -n ${ACR} --image ${APP}:${TAG}" .
+az acr run --registry myregistry.azurecr.io \
+  --cmd "az acr repository delete -n myregistry.azurecr.io --image my-app:v1.0.0" .
 
 # ECR cleanup: Using lifecycle policy
 cat > lifecycle-policy.json << 'EOF'
@@ -572,7 +572,7 @@ cat > lifecycle-policy.json << 'EOF'
   ]
 }
 EOF
-aws ecr put-lifecycle-policy --repository-name ${APP} --lifecycle-policy-text file://lifecycle-policy.json
+aws ecr put-lifecycle-policy --repository-name my-app --lifecycle-policy-text file://lifecycle-policy.json
 ```
 
 ---
@@ -585,25 +585,25 @@ aws ecr put-lifecycle-policy --repository-name ${APP} --lifecycle-policy-text fi
 # GitHub Actions example
 steps:
   - name: Build image
-    run: docker build -t ${REGISTRY}/${APP}:${TAG} .
+    run: docker build -t registry.example.com/my-app:v1.0.0 .
 
   - name: Scan image
-    run: trivy image --exit-code 1 --severity CRITICAL ${REGISTRY}/${APP}:${TAG}
+    run: trivy image --exit-code 1 --severity CRITICAL registry.example.com/my-app:v1.0.0
 
   - name: Generate SBOM
-    run: syft ${REGISTRY}/${APP}:${TAG} -o spdx-json > sbom.json
+    run: syft registry.example.com/my-app:v1.0.0 -o spdx-json > sbom.json
 
   - name: Push image
-    run: docker push ${REGISTRY}/${APP}:${TAG}
+    run: docker push registry.example.com/my-app:v1.0.0
 
   - name: Sign image
-    run: cosign sign --key ${COSIGN_KEY} ${REGISTRY}/${APP}:${TAG}
+    run: cosign sign --key cosign.pub registry.example.com/my-app:v1.0.0
 
   - name: Attach SBOM
-    run: cosign attach sbom --sbom sbom.json ${REGISTRY}/${APP}:${TAG}
+    run: cosign attach sbom --sbom sbom.json registry.example.com/my-app:v1.0.0
 
   - name: Publish build info
-    run: kubectl label image ${REGISTRY}/${APP}:${TAG} buildNumber=${BUILD_NUMBER} --overwrite
+    run: kubectl label image registry.example.com/my-app:v1.0.0 buildNumber=1 --overwrite
 ```
 
 ### Build Provenance
@@ -622,24 +622,24 @@ steps:
 
 ```bash
 # Create image stream
-oc create imagestream ${APP} -n ${NAMESPACE}
+oc create imagestream my-app -n my-namespace
 
 # Import from external registry
-oc import-image ${APP}:${TAG} \
-  --from=${EXTERNAL_REGISTRY}/${APP}:${TAG} \
-  --confirm -n ${NAMESPACE}
+oc import-image my-app:v1.0.0 \
+  --from=external-registry.example.com/my-app:v1.0.0 \
+  --confirm -n my-namespace
 
 # Schedule periodic import
-oc tag --scheduled=true ${EXTERNAL_REGISTRY}/${APP}:${TAG} ${NAMESPACE}/${APP}:${TAG}
+oc tag --scheduled=true external-registry.example.com/my-app:v1.0.0 my-namespace/my-app:v1.0.0
 
 # Promote between namespaces
-oc tag ${DEV_NS}/${APP}:${TAG} ${STAGING_NS}/${APP}:${TAG}
+oc tag development/my-app:v1.0.0 staging/my-app:v1.0.0
 
 # List image stream tags
-oc get istag -n ${NAMESPACE}
+oc get istag -n my-namespace
 
 # Get image stream history
-oc describe imagestream ${APP} -n ${NAMESPACE}
+oc describe imagestream my-app -n my-namespace
 ```
 
 ---
