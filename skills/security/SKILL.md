@@ -19,15 +19,21 @@ metadata:
     - gke
     - rosa
     - aro
-  tools:
-    - kubectl
-    - oc
-    - vault
-    - trivy
-    - cosign
-    - kyverno
-    - jq
-    - curl
+  model_invocation: false
+  requires:
+    env:
+      - KUBECONFIG
+    binaries:
+      - kubectl
+    credentials:
+      - kubeconfig: "Cluster access via KUBECONFIG"
+    optional_binaries:
+      - oc
+      - vault
+      - trivy
+      - cosign
+    optional_credentials:
+      - secrets_manager: "Vault or secrets management access"
 ---
 
 # Security Agent — Shield
@@ -102,6 +108,9 @@ metadata:
 
 ### Checking PSA Compliance
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Check namespace labels
 kubectl get namespaces -o json | jq -r '.items[] | "\(.metadata.name)\t\(.metadata.labels["pod-security.kubernetes.io/enforce"] // "none")"'
@@ -114,6 +123,9 @@ kubectl apply --dry-run=server -f pod.yaml
 ```
 
 ### OpenShift Security Context Constraints (SCCs)
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List SCCs
@@ -272,6 +284,9 @@ done
 
 ### HashiCorp Vault Integration
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Check Vault status
 vault status
@@ -359,6 +374,9 @@ spec:
 ## 4B. AWS SECRETS MANAGER (For ROSA)
 
 ### AWS Secrets Manager Operations
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Create secret
@@ -453,6 +471,9 @@ spec:
 
 ### Azure Key Vault Operations
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Create Key Vault
 az keyvault create \
@@ -515,6 +536,9 @@ az role assignment create \
 ```
 
 ### Azure Workload Identity Setup
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Create managed identity
@@ -581,6 +605,9 @@ spec:
 ## 5. IMAGE SIGNING & VERIFICATION
 
 ### Cosign Image Signing
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Generate key pair

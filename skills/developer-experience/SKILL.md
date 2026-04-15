@@ -20,12 +20,18 @@ metadata:
     - gke
     - rosa
     - aro
-  tools:
-    - kubectl
-    - oc
-    - helm
-    - jq
-    - yq
+  model_invocation: false
+  requires:
+    env:
+      - KUBECONFIG
+    binaries:
+      - kubectl
+    credentials:
+      - kubeconfig: "Cluster access via KUBECONFIG"
+    optional_binaries:
+      - oc
+      - helm
+      - yq
 ---
 
 # Developer Experience Agent — Desk
@@ -81,6 +87,9 @@ Every namespace gets:
 3. **NetworkPolicy** — Default deny ingress/egress
 4. **RBAC** — Team role bindings
 5. **Labels** — Team, environment, cost-center
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 
@@ -146,6 +155,9 @@ spec:
 
 ### OpenShift Project Creation
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Create project (OpenShift)
 oc new-project my-namespace \
@@ -205,6 +217,9 @@ kubectl describe pod my-pod -n my-namespace | grep -A 5 "Liveness"
 
 **Symptoms:** Container killed with exit code 137, reason OOMKilled.
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Check current memory usage vs limits
 kubectl top pod my-pod -n my-namespace
@@ -229,6 +244,9 @@ kubectl patch deployment my-deployment -n my-namespace --type json -p '[
 ### ImagePullBackOff
 
 **Symptoms:** Pod stuck in ImagePullBackOff.
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Check the exact error

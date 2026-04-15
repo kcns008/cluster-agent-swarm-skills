@@ -19,12 +19,17 @@ metadata:
     - gke
     - rosa
     - aro
-  tools:
-    - kubectl
-    - oc
-    - curl
-    - jq
-    - promtool
+  model_invocation: false
+  requires:
+    env:
+      - KUBECONFIG
+    binaries:
+      - kubectl
+    credentials:
+      - kubeconfig: "Cluster access via KUBECONFIG"
+    optional_binaries:
+      - oc
+      - promtool
 ---
 
 # Observability Agent — Pulse
@@ -445,6 +450,9 @@ curl -s -X POST "alertmanager.example.com/api/v2/silences" \
 
 ### Quick Diagnosis Commands
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Application health
 kubectl get pods -n my-namespace -l app=my-app
@@ -674,6 +682,9 @@ aws logs get-log-events \
 ```
 
 ### CloudWatch Alarms
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List alarms

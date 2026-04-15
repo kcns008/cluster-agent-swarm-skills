@@ -19,15 +19,22 @@ metadata:
     - gke
     - rosa
     - aro
-  tools:
-    - kubectl
-    - oc
-    - az
-    - aws
-    - gcloud
-    - rosa
-    - jq
-    - curl
+  model_invocation: false
+  requires:
+    env:
+      - KUBECONFIG
+    binaries:
+      - kubectl
+    credentials:
+      - kubeconfig: "Cluster access via KUBECONFIG"
+    optional_binaries:
+      - oc
+      - aws
+      - az
+      - gcloud
+      - rosa
+    optional_credentials:
+      - cloud: "Cloud provider credentials for managed cluster operations"
 ---
 
 # Cluster Operations Agent — Atlas
@@ -100,6 +107,9 @@ detect_platform() {
 
 ### Node Management
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # View all nodes with details
 kubectl get nodes -o wide
@@ -135,6 +145,9 @@ kubectl taint nodes my-node dedicated=gpu:NoSchedule
 
 ### OpenShift Node Management
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # View MachineSets
 oc get machinesets -n openshift-machine-api
@@ -156,6 +169,9 @@ oc get machinehealthcheck -n openshift-machine-api
 ```
 
 ### EKS Node Management
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List node groups
@@ -217,6 +233,9 @@ gcloud container node-pools create my-pool \
 
 ### ROSA Node Management
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # List node groups
 rosa list nodegroups --cluster my-cluster
@@ -239,6 +258,9 @@ rosa delete nodegroup my-nodegroup --cluster my-cluster --yes
 ```
 
 ### ROSA Cluster Management
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List ROSA clusters
@@ -340,6 +362,9 @@ kubectl get pvc -A --field-selector=status.phase=Pending
 
 ### OpenShift Upgrades
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Check available upgrades
 oc adm upgrade
@@ -368,6 +393,9 @@ oc get mcp worker -o jsonpath='{.status.conditions[*].type}{"\n"}{.status.condit
 - Check for deprecated API usage
 
 ### EKS Upgrades
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Check available upgrades
@@ -413,6 +441,9 @@ gcloud container clusters upgrade my-cluster --node-pool my-pool --cluster-versi
 ```
 
 ### ROSA Upgrades
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List available upgrades
@@ -692,6 +723,9 @@ kubectl get pvc -A --field-selector=status.phase=Pending
 
 ### Backup Strategy
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # 1. etcd backup (most critical)
 
@@ -706,6 +740,9 @@ velero backup describe my-backup
 ```
 
 ### Recovery Procedures
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Restore from etcd backup (OpenShift)

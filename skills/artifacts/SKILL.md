@@ -20,18 +20,25 @@ metadata:
     - gke
     - rosa
     - aro
-  tools:
-    - jfrog
-    - trivy
-    - grype
-    - syft
-    - cosign
-    - crane
-    - skopeo
-    - kubectl
-    - oc
-    - jq
-    - curl
+  model_invocation: false
+  requires:
+    env:
+      - KUBECONFIG
+    binaries:
+      - kubectl
+    credentials:
+      - kubeconfig: "Cluster access via KUBECONFIG"
+    optional_binaries:
+      - oc
+      - crane
+      - skopeo
+      - trivy
+      - grype
+      - syft
+      - cosign
+      - jfrog
+    optional_credentials:
+      - registry: "Container registry credentials for image operations"
 ---
 
 # Artifact Agent — Cache
@@ -81,6 +88,9 @@ You are meticulous about provenance (where it came from) and immutability (it do
 
 ### OpenShift Integrated Registry
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Check registry status
 oc get clusteroperator image-registry -o json | jq '.status.conditions'
@@ -103,6 +113,9 @@ oc get route default-route -n openshift-image-registry -o jsonpath='{.spec.host}
 ```
 
 ### JFrog Artifactory
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List repositories
@@ -151,6 +164,9 @@ curl -s -u "HARBOR_USER:HARBOR_PASSWORD" \
 
 ### Generic Registry (crane/skopeo)
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # List tags
 crane ls registry.example.com/my-app
@@ -171,6 +187,9 @@ crane config registry.example.com/my-app:v1.0.0 | jq .
 ```
 
 ### Azure Container Registry (ACR)
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # List ACR instances
@@ -214,6 +233,9 @@ az acr webhook add \
 ```
 
 ### Amazon Elastic Container Registry (ECR)
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Create ECR repository
@@ -286,6 +308,9 @@ Before promoting an artifact to the next environment:
 
 ### Promotion Commands
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 
 # Manual promotion via JFrog
@@ -352,6 +377,9 @@ grype dir:.
 
 ### Azure Container Registry Scanning
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Scan image in ACR
 az acr scan \
@@ -368,6 +396,9 @@ az acr update -n myregistry.azurecr.io --enable-scan
 ```
 
 ### Amazon ECR Scanning
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Start image scan
@@ -471,6 +502,9 @@ trivy sbom sbom-spdx.json --severity CRITICAL,HIGH
 
 ### Cosign Operations
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Generate key pair
 cosign generate-key-pair
@@ -521,6 +555,9 @@ retention_policy:
 ```
 
 ### Cleanup Commands
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 
@@ -619,6 +656,9 @@ steps:
 ## 8. OPENSHIFT IMAGE STREAMS
 
 ### Image Stream Management
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Create image stream

@@ -7,7 +7,7 @@ description: >
   Pure instruction-based skill — no executable scripts.
 metadata:
   author: kcns008
-  version: 2.0.0
+  version: 2.1.0
   agent_name: Swarm
   agent_role: Platform Agent Swarm (All Agents)
   session_key: "agent:platform:swarm"
@@ -22,10 +22,27 @@ metadata:
     - aro
   install_type: "instruction-only"
   always: false
-  model_invocation: true
+  model_invocation: false
   requires:
+    env:
+      - KUBECONFIG
     binaries:
       - kubectl
+  optional_binaries:
+    - oc
+    - helm
+    - jq
+  optional_env:
+    - AWS_ACCESS_KEY_ID
+    - AWS_SECRET_ACCESS_KEY
+    - AZURE_CLIENT_ID
+    - AZURE_CLIENT_SECRET
+    - AZURE_TENANT_ID
+    - GOOGLE_APPLICATION_CREDENTIALS
+  credentials:
+    - kubeconfig: "KUBECONFIG path or ~/.kube/config for cluster access"
+    - cloud: "Optional cloud provider credentials for managed clusters (AWS/Azure/GCP)"
+    - registry: "Optional container registry credentials for image operations"
 ---
 
 # Kubernetes Agent Swarm — Platform Operations

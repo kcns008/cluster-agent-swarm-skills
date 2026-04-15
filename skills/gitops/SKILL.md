@@ -19,14 +19,22 @@ metadata:
     - gke
     - rosa
     - aro
-  tools:
-    - argocd
-    - helm
-    - kustomize
-    - kubectl
-    - oc
-    - git
-    - jq
+  model_invocation: false
+  requires:
+    env:
+      - KUBECONFIG
+    binaries:
+      - kubectl
+    credentials:
+      - kubeconfig: "Cluster access via KUBECONFIG"
+    optional_binaries:
+      - oc
+      - helm
+      - argocd
+      - kustomize
+      - git
+    optional_credentials:
+      - gitops: "ArgoCD token for GitOps operations"
 ---
 
 # GitOps Agent — Flow
@@ -73,6 +81,9 @@ You believe in self-healing systems. Every change goes through a PR.
 
 ### Application Operations
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # List all applications
 argocd app list
@@ -116,6 +127,9 @@ argocd app delete my-app --cascade
 ```
 
 ### Application Creation
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Create application from Git repo
@@ -228,6 +242,9 @@ spec:
 
 ### Chart Management
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Add Helm repo
 helm repo add my-repo https://github.com/org/my-repo
@@ -306,6 +323,9 @@ charts/my-app/
 ## 3. KUSTOMIZE OPERATIONS
 
 ### Kustomize Overlays
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Build and preview
@@ -587,6 +607,9 @@ spec:
 
 ### OpenShift DeploymentConfig (Legacy)
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # View DeploymentConfigs
 oc get dc -n my-namespace
@@ -698,6 +721,9 @@ spec:
 
 ### Store Secret in AWS Secrets Manager
 
+
+> ⚠️ Requires human approval before executing.
+
 ```bash
 # Create secret
 aws secretsmanager create-secret \
@@ -780,6 +806,9 @@ spec:
 ## 11. AZURE KEY VAULT (For ARO)
 
 ### Store Secret in Azure Key Vault
+
+
+> ⚠️ Requires human approval before executing.
 
 ```bash
 # Create key vault
