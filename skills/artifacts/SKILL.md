@@ -287,8 +287,6 @@ Before promoting an artifact to the next environment:
 ### Promotion Commands
 
 ```bash
-# Use the helper script
-bash scripts/promote-artifact.sh ${APP}:${TAG} dev staging
 
 # Manual promotion via JFrog
 jfrog rt copy \
@@ -329,8 +327,6 @@ crane copy \
 ### Image Scanning
 
 ```bash
-# Use the helper script
-bash scripts/scan-image.sh ${REGISTRY}/${APP}:${TAG}
 
 # Direct Trivy scan
 trivy image --severity CRITICAL,HIGH ${REGISTRY}/${APP}:${TAG}
@@ -421,8 +417,6 @@ scan_policy:
 ### Generating SBOMs
 
 ```bash
-# Use the helper script
-bash scripts/generate-sbom.sh ${REGISTRY}/${APP}:${TAG}
 
 # Syft SBOM generation
 syft ${REGISTRY}/${APP}:${TAG} -o spdx-json > sbom-spdx.json
@@ -529,8 +523,6 @@ retention_policy:
 ### Cleanup Commands
 
 ```bash
-# Use the helper script
-bash scripts/cleanup-registry.sh dev 30
 
 # JFrog cleanup
 jfrog rt delete "dev-docker-local/${APP}/" \
@@ -611,14 +603,12 @@ steps:
     run: cosign attach sbom --sbom sbom.json ${REGISTRY}/${APP}:${TAG}
 
   - name: Publish build info
-    run: bash scripts/build-info.sh ${APP} ${TAG} ${BUILD_NUMBER}
+    run: kubectl label image ${REGISTRY}/${APP}:${TAG} buildNumber=${BUILD_NUMBER} --overwrite
 ```
 
 ### Build Provenance
 
 ```bash
-# Use the helper script
-bash scripts/build-info.sh ${APP} ${TAG} ${BUILD_NUMBER}
 
 # SLSA provenance generation
 # Typically done in CI/CD pipeline using slsa-github-generator or similar
@@ -878,18 +868,3 @@ curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
 | MEDIUM | 30 minutes | No escalation |
 
 ---
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `promote-artifact.sh` | Promote artifact between environments |
-| `scan-image.sh` | Vulnerability scan with Trivy/Grype |
-| `generate-sbom.sh` | Generate SBOM with Syft |
-| `cleanup-registry.sh` | Clean up old images by retention policy |
-| `build-info.sh` | Collect and publish build provenance |
-
-Run any script:
-```bash
-bash scripts/<script-name>.sh [arguments]
-```

@@ -178,8 +178,6 @@ roleRef:
 ### RBAC Audit Commands
 
 ```bash
-# Run the bundled RBAC audit
-bash scripts/rbac-audit.sh
 
 # Check who can perform an action
 kubectl auth can-i create deployments --namespace ${NAMESPACE} --as system:serviceaccount:${NAMESPACE}:${SA_NAME}
@@ -260,8 +258,6 @@ spec:
 ### Network Policy Audit
 
 ```bash
-# Run the bundled audit
-bash scripts/network-policy-audit.sh
 
 # Find namespaces without NetworkPolicies
 kubectl get namespaces -o json | jq -r '.items[].metadata.name' | while read ns; do
@@ -356,7 +352,6 @@ spec:
 
 ### Use the bundled rotation helper:
 ```bash
-bash scripts/secret-rotation.sh ${APP_NAME} ${NAMESPACE}
 ```
 
 ---
@@ -767,8 +762,6 @@ spec:
 ### CIS Kubernetes Benchmark
 
 ```bash
-# Run the bundled CIS benchmark
-bash scripts/cis-benchmark.sh
 
 # Using kube-bench directly
 kube-bench run --targets master,node,etcd,policies
@@ -781,7 +774,6 @@ kube-bench run --benchmark cis-1.8 --targets master,node
 
 ```bash
 # Run comprehensive security audit
-bash scripts/security-audit.sh
 
 # Quick privileged container check
 kubectl get pods -A -o json | jq -r '.items[] | select(.spec.containers[]?.securityContext?.privileged == true) | "\(.metadata.namespace)/\(.metadata.name)"'
@@ -845,7 +837,6 @@ spec:
 
 ```bash
 # Scan image with Trivy
-bash scripts/image-scan.sh ${REGISTRY}/${IMAGE}:${TAG}
 
 # Direct Trivy scan
 trivy image --severity CRITICAL,HIGH ${REGISTRY}/${IMAGE}:${TAG}
@@ -1115,19 +1106,3 @@ curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
 | MEDIUM | 20 minutes | No escalation |
 
 ---
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `security-audit.sh` | Comprehensive security posture audit |
-| `rbac-audit.sh` | RBAC permissions audit |
-| `network-policy-audit.sh` | NetworkPolicy coverage check |
-| `image-scan.sh` | Container image vulnerability scan |
-| `cis-benchmark.sh` | CIS benchmark compliance check |
-| `secret-rotation.sh` | Vault secret rotation helper |
-
-Run any script:
-```bash
-bash scripts/<script-name>.sh [arguments]
-```

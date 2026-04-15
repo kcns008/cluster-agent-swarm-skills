@@ -113,7 +113,6 @@ argocd app delete ${APP_NAME} --cascade
 
 ### Use the bundled sync helper:
 ```bash
-bash scripts/argocd-app-sync.sh ${APP_NAME} [--prune] [--force]
 ```
 
 ### Application Creation
@@ -275,7 +274,6 @@ helm history ${RELEASE} --namespace ${NAMESPACE}
 
 ### Use the bundled diff helper:
 ```bash
-bash scripts/helm-diff.sh ${RELEASE} ${CHART} ${NAMESPACE}
 ```
 
 ### Helm Chart Structure
@@ -511,8 +509,6 @@ spec:
 ### Detect Configuration Drift
 
 ```bash
-# Use the bundled drift detector
-bash scripts/drift-detect.sh
 
 # Manual drift check via ArgoCD
 argocd app diff ${APP_NAME}
@@ -1109,18 +1105,3 @@ curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
 | MEDIUM | 30 minutes | No escalation |
 
 ---
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `argocd-app-sync.sh` | ArgoCD application sync helper |
-| `drift-detect.sh` | Configuration drift detection |
-| `helm-diff.sh` | Helm release diff before upgrade |
-| `rollback.sh` | Safe deployment rollback |
-| `promote-image.sh` | Image promotion across environments |
-
-Run any script:
-```bash
-bash scripts/<script-name>.sh [arguments]
-```

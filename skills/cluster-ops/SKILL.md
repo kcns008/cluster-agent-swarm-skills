@@ -318,9 +318,24 @@ az aro machinepool create -g ${RESOURCE_GROUP} --cluster-name ${CLUSTER} \
 
 ### Pre-Upgrade Checklist
 
-Always run before any upgrade:
+Always run these checks before any upgrade:
 ```bash
-bash scripts/pre-upgrade-check.sh
+# Check node health
+kubectl get nodes -o wide
+kubectl top nodes
+
+# Check for unhealthy pods
+kubectl get pods -A --field-selector=status.phase!=Running | grep -v Completed
+
+# Check etcd health (OpenShift)
+oc get pods -n openshift-etcd
+oc rsh -n openshift-etcd etcd-$(hostname) etcdctl endpoint health --cluster
+
+# Check ClusterOperators (OpenShift)
+oc get clusteroperators
+
+# Check PVCs
+kubectl get pvc -A --field-selector=status.phase=Pending
 ```
 
 ### OpenShift Upgrades
@@ -456,9 +471,6 @@ kubectl exec -n kube-system etcd-${MASTER_NODE} -- etcdctl endpoint health \
 ### etcd Backup
 
 ```bash
-# Use the bundled script
-bash scripts/etcd-backup.sh
-
 # OpenShift etcd backup
 oc debug node/${MASTER_NODE} -- chroot /host /usr/local/bin/cluster-backup.sh /home/core/etcd-backup
 
@@ -520,9 +532,13 @@ kubectl top nodes --no-headers | awk '{
 }'
 ```
 
-### Use the bundled capacity report:
+### Generate a Capacity Report
+
+Run these commands to assess capacity:
 ```bash
-bash scripts/capacity-report.sh
+kubectl top nodes
+kubectl describe nodes | grep -A5 "Allocated resources"
+kubectl get pods -A -o json | jq -r '[.items[] | select(.status.phase=="Running") | .spec.containers[] | {cpu: .resources.requests.cpu, mem: .resources.requests.memory}] | group_by(.cpu) | .[] | {cpu: .[0].cpu, count: length}'
 ```
 
 ### Autoscaler Configuration
@@ -624,9 +640,28 @@ oc get storageclusters -n openshift-storage
 
 ## 7. CLUSTER HEALTH SCORING
 
-Run the comprehensive health check:
+### Cluster Health Check
+
+Run these commands to assess cluster health:
 ```bash
-bash scripts/cluster-health-check.sh
+# Node health
+kubectl get nodes -o wide
+kubectl top nodes
+
+# Unhealthy pods
+kubectl get pods -A --field-selector=status.phase!=Running | grep -v Completed
+
+# CrashLoopBackOff pods
+kubectl get pods -A -o json | jq -r '.items[] | select(.status.containerStatuses[]?.state.waiting?.reason=="CrashLoopBackOff") | "\(.metadata.namespace)/\(.metadata.name)"'
+
+# Warning events
+kubectl get events -A --field-selector type=Warning --sort-by='.lastTimestamp' | tail -30
+
+# Resource pressure
+kubectl describe nodes | grep -A5 "Allocated resources"
+
+# Pending PVCs
+kubectl get pvc -A --field-selector=status.phase=Pending
 ```
 
 ### Health Score Weights
@@ -659,7 +694,6 @@ bash scripts/cluster-health-check.sh
 
 ```bash
 # 1. etcd backup (most critical)
-bash scripts/etcd-backup.sh
 
 # 2. Cluster resource backup (Velero)
 velero backup create cluster-backup-$(date +%Y%m%d) \
@@ -1120,18 +1154,3 @@ curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
 | LOW | No escalation | No escalation |
 
 ---
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `cluster-health-check.sh` | Comprehensive health assessment with scoring |
-| `node-maintenance.sh` | Safe node drain and maintenance prep |
-| `pre-upgrade-check.sh` | Pre-upgrade validation checklist |
-| `etcd-backup.sh` | etcd snapshot and verification |
-| `capacity-report.sh` | Cluster capacity and utilization report |
-
-Run any script:
-```bash
-bash scripts/<script-name>.sh [arguments]
-```

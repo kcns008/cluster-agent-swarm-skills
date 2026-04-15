@@ -135,8 +135,6 @@ curl -s "http://${PROMETHEUS_URL}/api/v1/targets" | jq '.data.activeTargets | le
 # Alerts
 curl -s "http://${PROMETHEUS_URL}/api/v1/alerts" | jq '.data.alerts[] | {alertname: .labels.alertname, state: .state, severity: .labels.severity}'
 
-# Use the helper script
-bash scripts/metric-query.sh 'rate(http_requests_total{status=~"5.."}[5m])'
 ```
 
 ### OpenShift Monitoring Stack
@@ -223,8 +221,6 @@ curl -s "http://${LOKI_URL}/loki/api/v1/query_range" \
   --data-urlencode "end=$(date -u +%s)000000000" \
   --data-urlencode "step=60" | jq .
 
-# Use the helper script
-bash scripts/log-search.sh production payment-service "error|exception|fatal"
 ```
 
 ### OpenShift Logging
@@ -360,7 +356,6 @@ spec:
 kubectl get prometheusrules -A
 
 # Check currently firing alerts
-bash scripts/alert-triage.sh
 
 # Silence an alert (via Alertmanager API)
 curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
@@ -430,7 +425,6 @@ curl -s -X POST "${ALERTMANAGER_URL}/api/v2/silences" \
 ### Generate SLO Report
 
 ```bash
-bash scripts/slo-report.sh ${SERVICE} 30d 0.999
 ```
 
 ---
@@ -478,7 +472,6 @@ kubectl exec -n ${NAMESPACE} ${POD} -- curl -s -o /dev/null -w "%{http_code}" ht
 ### Generate Incident Report
 
 ```bash
-bash scripts/incident-report.sh "Payment API Outage" P1 production payment-service
 ```
 
 ---
@@ -943,18 +936,3 @@ curl -X POST 'https://events.pagerduty.com/v2/enqueue' \
 | MEDIUM | 30 minutes | No escalation |
 
 ---
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `alert-triage.sh` | Triage currently firing alerts |
-| `metric-query.sh` | Execute PromQL queries |
-| `log-search.sh` | Search logs via Loki or kubectl |
-| `slo-report.sh` | Generate SLO compliance report |
-| `incident-report.sh` | Generate post-incident review document |
-
-Run any script:
-```bash
-bash scripts/<script-name>.sh [arguments]
-```

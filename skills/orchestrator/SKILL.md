@@ -240,12 +240,9 @@ Run at configured time (default 23:30 UTC). Compile a report:
 {any items approaching SLA deadline}
 ```
 
-### Standup Script
+### Standup Generation
 
-Use the bundled standup generator:
-```bash
-bash scripts/daily-standup.sh
-```
+Generate a daily standup by querying cluster state and compiling the report template above using kubectl commands.
 
 ---
 
@@ -338,11 +335,14 @@ When any agent identifies a skill needs improvement during troubleshooting:
 Every heartbeat, run the skill improvement scanner:
 
 ```bash
-# Check for new improvements (no PR creation)
-bash scripts/skill-improvement-pr.sh --check-only
+# Check for new improvements in logs
+grep -l "SKILL_IMPROVEMENT" logs/LOGS.md
 
-# Scan and create PRs
-bash scripts/skill-improvement-pr.sh
+# Create a branch and PR for identified improvements
+git checkout -b skill-improvement/$(date +%Y%m%d)
+git add -A && git commit -m "skill improvement: <description>"
+git push origin HEAD
+gh pr create --title "Skill Improvement" --body "<description>"
 ```
 
 ### Human Review Process
@@ -403,16 +403,17 @@ kubectl cluster-info  # or oc cluster-info
 
 ### Setup New Session
 
-When an agent starts a new session or changes context:
+When an agent starts a new session or changes context, run these commands:
 
 ```bash
-# Set up session for specific environment
-bash scripts/setup-session.sh <environment> [context-name]
+# Detect CLI and cluster info
+kubectl cluster-info
+kubectl config current-context
+kubectl version -o json 2>/dev/null | jq -r '.serverVersion.gitVersion'
+oc get clusterversion -o jsonpath='{.items[0].status.desired.version}' 2>/dev/null
 
-# Examples:
-bash scripts/setup-session.sh prod my-prod-cluster
-bash scripts/setup-session.sh dev
-bash scripts/setup-session.sh qa qa-eks-cluster
+# Update working/SESSION.md with environment context
+# Include: environment, cluster name, platform, versions, permission level
 ```
 
 ### Gather Cluster Information
@@ -420,11 +421,14 @@ bash scripts/setup-session.sh qa qa-eks-cluster
 When first connecting to a cluster (or periodically):
 
 ```bash
-# Gather and update cluster info
-bash scripts/gather-cluster-info.sh
+# Detect platform
+oc get clusterversion version -o jsonpath='{.status.desired.version}' 2>/dev/null
+kubectl version -o json 2>/dev/null | jq -r '.serverVersion.gitVersion'
 
-# Output JSON for automation
-bash scripts/gather-cluster-info.sh --json
+# Check installed components
+kubectl get deploy,statefulset -A -o wide 2>/dev/null
+
+# Update working/SESSION.md with gathered information
 ```
 
 This updates `working/SESSION.md` with:
@@ -825,19 +829,3 @@ All human communication MUST include:
 - **Log Reference** - Link to full logs
 
 ---
-
-## Helper Scripts
-
-| Script | Purpose |
-|--------|---------|
-| `daily-standup.sh` | Generate daily standup report |
-| `route-task.sh` | Route a task to the appropriate agent |
-| `check-sla.sh` | Check for SLA breaches |
-| `skill-improvement-pr.sh` | Scan logs for SKILL_IMPROVEMENT and create PRs |
-| `setup-session.sh` | Set up environment context (dev/qa/staging/prod) |
-| `gather-cluster-info.sh` | Gather cluster version and component info |
-
-Run any script:
-```bash
-bash scripts/<script-name>.sh [arguments]
-```
