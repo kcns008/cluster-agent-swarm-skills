@@ -291,7 +291,7 @@ Step 1: Agent identifies improvement
         → Logs to logs/LOGS.md with Category: SKILL_IMPROVEMENT
         
 Step 2: Orchestrator heartbeat detects SKILL_IMPROVEMENT entries
-        → Runs skill-improvement-pr.sh script
+        → Scans agent logs for improvement opportunities and creates PRs
         
 Step 3: Script creates branch with improvement notes
         → Adds entry to logs/SKILL_IMPROVEMENTS.md

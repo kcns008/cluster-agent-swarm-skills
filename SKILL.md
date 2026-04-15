@@ -1,11 +1,12 @@
 ---
-name: cluster-agent-swarm
+name: kubernetes
 description: >
-  Complete Platform Agent Swarm — A coordinated multi-agent system for Kubernetes and OpenShift 
-  platform operations. Includes Orchestrator (Jarvis), Cluster Ops (Atlas), GitOps (Flow), 
+  Kubernetes & OpenShift Platform Agent Swarm — A coordinated multi-agent system for
+  cluster operations. Includes Orchestrator (Jarvis), Cluster Ops (Atlas), GitOps (Flow),
   Security (Shield), Observability (Pulse), Artifacts (Cache), and Developer Experience (Desk).
+  Pure instruction-based skill — no executable scripts.
 metadata:
-  author: cluster-agent-swarm
+  author: kcns008
   version: 2.0.0
   agent_name: Swarm
   agent_role: Platform Agent Swarm (All Agents)
@@ -27,42 +28,92 @@ metadata:
       - kubectl
 ---
 
-# Cluster Agent Swarm — Complete Platform Operations
+# Kubernetes Agent Swarm — Platform Operations
 
-This is a pure instruction-only skill package. It provides Kubernetes/OpenShift cluster management guidance through inline command examples and documentation — no executable scripts are shipped.
+A multi-agent system for Kubernetes and OpenShift platform operations. Seven specialized agents work together as a coordinated swarm.
 
-### Required
-- **kubectl** — Kubernetes CLI (must be in PATH)
-- **KUBECONFIG** — Valid kubeconfig with cluster access (`KUBECONFIG` env var or `~/.kube/config`)
+## Runtime Requirements
 
-### Optional (enable as needed)
-- **oc** — OpenShift CLI
-- **helm** — Helm package manager
-- **jq** — JSON processor
-- **kustomize** — Kubernetes manifest customization
-- **argocd** — ArgoCD CLI
-- **trivy/grype** — Container vulnerability scanners
-- **syft** — SBOM generation
-- **cosign** — Image signing
-- **vault** — HashiCorp Vault CLI
+| Requirement | Required | Description |
+|-------------|----------|-------------|
+| `kubectl` | ✅ Yes | Kubernetes CLI — must be in PATH |
+| `oc` | Optional | OpenShift CLI — needed for OCP/ROSA/ARO |
+| `helm` | Optional | For GitOps agent Helm operations |
+| `jq` | Optional | For JSON output parsing |
+| `KUBECONFIG` | ✅ Yes | Cluster access via env var or `~/.kube/config` |
 
----
+Optional cloud CLIs (`aws`, `az`, `gcloud`, `rosa`) — only needed for managed cluster operations.
+
+## Installation
+
+```bash
+clawhub install kubernetes
+```
+
+Or install individual agents:
+```bash
+clawhub install orchestrator
+clawhub install cluster-ops
+clawhub install gitops
+clawhub install security
+clawhub install observability
+clawhub install artifacts
+clawhub install developer-experience
+```
 
 ## The Swarm — Agent Roster
 
-| Agent | Code Name | Session Key | Domain |
-|-------|-----------|-------------|--------|
-| Orchestrator | Jarvis | `agent:platform:orchestrator` | Task routing, coordination, standups |
-| Cluster Ops | Atlas | `agent:platform:cluster-ops` | Cluster lifecycle, nodes, upgrades |
-| GitOps | Flow | `agent:platform:gitops` | ArgoCD, Helm, Kustomize, deploys |
-| Security | Shield | `agent:platform:security` | RBAC, policies, secrets, scanning |
-| Observability | Pulse | `agent:platform:observability` | Metrics, logs, alerts, incidents |
-| Artifacts | Cache | `agent:platform:artifacts` | Registries, SBOM, promotion, CVEs |
-| Developer Experience | Desk | `agent:platform:developer-experience` | Namespaces, onboarding, support |
+| Agent | Code Name | Domain |
+|-------|-----------|--------|
+| Orchestrator | Jarvis | Task routing, coordination, standups |
+| Cluster Ops | Atlas | Cluster lifecycle, nodes, upgrades |
+| GitOps | Flow | ArgoCD, Helm, Kustomize, deploys |
+| Security | Shield | RBAC, policies, secrets, scanning |
+| Observability | Pulse | Metrics, logs, alerts, incidents |
+| Artifacts | Cache | Registries, SBOM, promotion, CVEs |
+| Developer Experience | Desk | Namespaces, onboarding, support |
 
----
+## How It Works
 
-## Agent Capabilities Summary
+This is an **instruction-only** skill. Agents receive markdown instructions describing what commands to run and how to interpret output. No executable scripts are included — the agent translates instructions into actions using the host's installed CLI tools.
+
+### Session Setup
+
+Before using the swarm, establish cluster context:
+
+```bash
+# Verify access
+kubectl cluster-info
+kubectl get nodes
+
+# For OpenShift
+oc status
+```
+
+### Agent Communication
+
+Agents communicate via @mentions in shared task comments:
+```
+@Shield Please review the RBAC for payment-service v3.2 before I sync.
+@Pulse Is the CPU spike related to the deployment or external traffic?
+@Atlas The staging cluster needs 2 more worker nodes.
+```
+
+### Escalation Path
+1. Agent detects issue
+2. Agent attempts resolution within guardrails
+3. If blocked → @mention another agent or escalate to human
+4. P1 incidents → all relevant agents auto-notified
+
+## Heartbeat Schedule
+
+```
+*/5  * * * *  Atlas, Pulse, Shield     (fast response: incidents, alerts, CVEs)
+*/10 * * * *  Flow, Cache              (scheduled: deploys, promotions)
+*/15 * * * *  Desk, Orchestrator       (batch: onboarding, standups)
+```
+
+## Agent Capabilities
 
 ### What Agents CAN Do
 - Read cluster state (`kubectl get`, `kubectl describe`, `oc get`)
@@ -71,173 +122,42 @@ This is a pure instruction-only skill package. It provides Kubernetes/OpenShift 
 - Investigate and triage incidents
 - Provision standard resources (namespaces, quotas, RBAC)
 - Run health checks and audits
-- Scan images and generate SBOMs
 - Query metrics and logs
-- Execute pre-approved runbooks
 
 ### What Agents CANNOT Do (Human-in-the-Loop Required)
-- Delete production resources (`kubectl delete` in prod)
-- Modify cluster-wide policies (NetworkPolicy, OPA, Kyverno cluster policies)
+- Delete production resources
+- Modify cluster-wide policies
 - Make direct changes to secrets without rotation workflow
-- Modify network routes or service mesh configuration
-- Scale beyond defined resource limits
 - Perform irreversible cluster upgrades
 - Approve production deployments (can prepare, human approves)
-- Change RBAC at cluster-admin level
-
----
-
-## Communication Patterns
-
-### @Mentions
-Agents communicate via @mentions in shared task comments:
-```
-@Shield Please review the RBAC for payment-service v3.2 before I sync.
-@Pulse Is the CPU spike related to the deployment or external traffic?
-@Atlas The staging cluster needs 2 more worker nodes.
-```
-
-### Thread Subscriptions
-- Commenting on a task → auto-subscribe
-- Being @mentioned → auto-subscribe
-- Being assigned → auto-subscribe
-- Once subscribed → receive ALL future comments on heartbeat
-
-### Escalation Path
-1. Agent detects issue
-2. Agent attempts resolution within guardrails
-3. If blocked → @mention another agent or escalate to human
-4. P1 incidents → all relevant agents auto-notified
-
----
-
-## Heartbeat Schedule
-
-Agents wake on staggered 5-minute intervals:
-```
-*/5  * * * *  Atlas   (Cluster Ops - needs fast response for incidents)
-*/5  * * * *  Pulse   (Observability - needs fast response for alerts)
-*/5  * * * *  Shield  (Security - fast response for CVEs and threats)
-*/10 * * * *  Flow    (GitOps - deployments can wait a few minutes)
-*/10 * * * *  Cache   (Artifacts - promotions are scheduled)
-*/15 * * * *  Desk    (DevEx - developer requests aren't usually urgent)
-*/15 * * * *  Orchestrator (Coordination - overview and standups)
-```
-
----
 
 ## Key Principles
 
-- **Roles over genericism** — Each agent has a defined SOUL with exactly who they are
+- **Roles over genericism** — Each agent has a defined domain
 - **Files over mental notes** — Only files persist between sessions
-- **Staggered schedules** — Don't wake all agents at once
-- **Shared context** — One source of truth for tasks and communication
-- **Heartbeat, not always-on** — Balance responsiveness with cost
 - **Human-in-the-loop** — Critical actions require approval
 - **Guardrails over freedom** — Define what agents can and cannot do
-- **Audit everything** — Every action logged to activity feed
-- **Reliability first** — System stability always wins over new features
-- **Security by default** — Deny access, approve by exception
-
----
-
-## Detailed Agent Capabilities
-
-### Orchestrator (Jarvis)
-- Task routing: determining which agent should handle which request
-- Workflow orchestration: coordinating multi-agent operations
-- Daily standups: compiling swarm-wide status reports
-- Priority management: determining urgency and sequencing of work
-- Cross-agent communication: facilitating collaboration
-- Accountability: tracking what was promised vs what was delivered
-
-### Cluster Ops (Atlas)
-- OpenShift/Kubernetes cluster operations (upgrades, scaling, patching)
-- Node pool management and autoscaling
-- Resource quota management and capacity planning
-- Network troubleshooting (OVN-Kubernetes, Cilium, Calico)
-- Storage class management and PVC/CSI issues
-- etcd backup, restore, and health monitoring
-- Multi-platform expertise (OCP, EKS, AKS, GKE, ROSA, ARO)
-
-### GitOps (Flow)
-- ArgoCD application management (sync, rollback, sync waves, hooks)
-- Helm chart development, debugging, and templating
-- Kustomize overlays and patch generation
-- ApplicationSet templates for multi-cluster deployments
-- Deployment strategy management (canary, blue-green, rolling)
-- Git repository management and branching strategies
-- Drift detection and remediation
-- Secrets management integration (Vault, Sealed Secrets, External Secrets)
-
-### Security (Shield)
-- RBAC audit and management
-- NetworkPolicy review and enforcement
-- Security policy validation (OPA, Kyverno)
-- Vulnerability scanning (image scanning, CVE triage)
-- Secret rotation workflows
-- Security incident investigation
-- Compliance reporting
-
-### Observability (Pulse)
-- Prometheus/Grafana metric queries
-- Log aggregation and search (Loki, Elasticsearch)
-- Alert triage and investigation
-- SLO tracking and error budget monitoring
-- Incident response coordination
-- Dashboards and visualization
-- Telemetry pipeline troubleshooting
-
-### Artifacts (Cache)
-- Container registry management
-- Image scanning and CVE analysis
-- SBOM generation and tracking
-- Artifact promotion workflows
-- Version management
-- Registry caching and proxying
-
-### Developer Experience (Desk)
-- Namespace provisioning
-- Resource quota and limit range management
-- Developer onboarding
-- Template generation
-- Developer support and troubleshooting
-- Documentation generation
-
----
+- **Audit everything** — Every action logged
 
 ## File Structure
 
 ```
-cluster-agent-swarm-skills/
-├── SKILL.md                    # This file - combined swarm
+kubernetes/
+├── SKILL.md                    # This file — combined swarm
 ├── AGENTS.md                   # Swarm configuration and protocols
 ├── skills/
-│   ├── orchestrator/           # Jarvis - task routing
-│   │   └── SKILL.md
-│   ├── cluster-ops/            # Atlas - cluster operations
-│   │   └── SKILL.md
-│   ├── gitops/                 # Flow - GitOps
-│   │   └── SKILL.md
-│   ├── security/               # Shield - security
-│   │   └── SKILL.md
-│   ├── observability/          # Pulse - monitoring
-│   │   └── SKILL.md
-│   ├── artifacts/              # Cache - artifacts
-│   │   └── SKILL.md
-│   └── developer-experience/   # Desk - DevEx
-│       └── SKILL.md
+│   ├── orchestrator/SKILL.md   # Jarvis — task routing
+│   ├── cluster-ops/SKILL.md    # Atlas — cluster operations
+│   ├── gitops/SKILL.md         # Flow — GitOps
+│   ├── security/SKILL.md       # Shield — security
+│   ├── observability/SKILL.md  # Pulse — monitoring
+│   ├── artifacts/SKILL.md      # Cache — artifacts
+│   └── developer-experience/SKILL.md  # Desk — DevEx
+├── memory/MEMORY.md            # Long-term agent memory
+├── working/WORKING.md          # Session progress
+└── logs/LOGS.md                # Action audit trail
 ```
 
----
+## Detailed Agent Documentation
 
-## Reference Documentation
-
-For detailed capabilities of each agent, refer to individual SKILL.md files:
-- `skills/orchestrator/SKILL.md` - Full Orchestrator documentation
-- `skills/cluster-ops/SKILL.md` - Full Cluster Ops documentation
-- `skills/gitops/SKILL.md` - Full GitOps documentation
-- `skills/security/SKILL.md` - Full Security documentation
-- `skills/observability/SKILL.md` - Full Observability documentation
-- `skills/artifacts/SKILL.md` - Full Artifacts documentation
-- `skills/developer-experience/SKILL.md` - Full Developer Experience documentation
+See individual SKILL.md files for each agent's full capabilities, personality, and workflow instructions.
