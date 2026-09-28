@@ -2,6 +2,12 @@
 
 A coordinated multi-agent system for Kubernetes and OpenShift platform operations. Seven specialized agents work together as a swarm.
 
+## 🎬 Demo
+
+![Kubernetes Agent Swarm Demo](assets/swarm-standup.gif)
+
+**Full walkthrough** — see the swarm orient, delegate, and deploy on a live cluster in the [2-minute recording](assets/demo.gif).
+
 ## Agents
 
 | Agent | Code Name | Domain |
